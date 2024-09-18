@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 export default function Home() {
+  // State variables for managing the application's data and UI
   const [prompt, setPrompt] = useState("");
   const [result, setResult] = useState({ haiku: "", sonnet: "" });
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +15,7 @@ export default function Home() {
   const [haikuHistory, setHaikuHistory] = useState<Array<{ role: string; content: string }>>([]);
   const [sonnetHistory, setSonnetHistory] = useState<Array<{ role: string; content: string }>>([]);
 
+  // Effect to initialize session and load conversation history
   useEffect(() => {
     const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
@@ -23,6 +25,7 @@ export default function Home() {
     if (storedSonnetHistory) setSonnetHistory(JSON.parse(storedSonnetHistory));
   }, []);
 
+  // Function to handle form submission and API interaction
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sessionId) return;
@@ -30,6 +33,7 @@ export default function Home() {
     setResult({ haiku: "", sonnet: "" });
 
     try {
+      // Send request to the API
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -47,6 +51,7 @@ export default function Home() {
         throw new Error('Response body is null');
       }
 
+      // Process the streaming response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
@@ -78,11 +83,11 @@ export default function Home() {
         }
       }
 
-      // Update histories
+      // Update conversation histories
       setHaikuHistory(prev => [...prev, { role: 'user', content: prompt }, { role: 'assistant', content: haikuResponse }]);
       setSonnetHistory(prev => [...prev, { role: 'user', content: prompt }, { role: 'assistant', content: sonnetResponse }]);
 
-      // Store in localStorage
+      // Store updated histories in localStorage
       localStorage.setItem('haikuHistory', JSON.stringify(haikuHistory));
       localStorage.setItem('sonnetHistory', JSON.stringify(sonnetHistory));
 
@@ -94,11 +99,13 @@ export default function Home() {
     }
   };
 
+  // Render the UI components
   return (
     <div className="container mx-auto p-20">
       <h1 className="text-10xl font-semibold mb-8 mt-6 text-center">Claude 3 Comparison</h1>
       <Card>
         <CardContent className="pt-6">
+          {/* Form for user input */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="prompt">Enter your prompt:</Label>
@@ -124,7 +131,9 @@ export default function Home() {
         </CardContent>
       </Card>
 
+      {/* Display area for AI responses */}
       <div className="flex-grow flex flex-row gap-4 mb-4 w-full justify-center mt-4">
+        {/* Haiku response display */}
         <div className="rounded-lg border border-zinc-200 bg-white text-zinc-950 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 flex-1 flex flex-col w-full md:w-1/2">
           <div className="flex flex-col space-y-1.5 p-6">
             <h3 className="text-xl font-semibold leading-none tracking-tight">Claude 3 Haiku Response</h3>
@@ -138,6 +147,7 @@ export default function Home() {
             />
           </div>
         </div>
+        {/* Sonnet response display */}
         <div className="rounded-lg border border-zinc-200 bg-white text-zinc-950 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 flex-1 flex flex-col w-full md:w-1/2">
           <div className="flex flex-col space-y-1.5 p-6">
             <h3 className="text-xl font-semibold leading-none tracking-tight">Claude 3 Sonnet Response</h3>

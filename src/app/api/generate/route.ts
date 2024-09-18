@@ -3,6 +3,7 @@ import { Anthropic } from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
+// Initialize Supabase client for logging responses
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -17,6 +18,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 });
 
+// Initialize Anthropic client for AI model interactions
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -28,6 +30,7 @@ export async function POST(req: Request) {
   const { prompt, sessionId, haikuHistory, sonnetHistory } = await req.json();
   console.log('Received prompt:', prompt, 'sessionId:', sessionId);
 
+  // Validate input to ensure necessary data is provided
   if (!prompt || !sessionId) {
     return new Response(JSON.stringify({ error: 'Prompt and Session ID are required' }), {
       status: 400,
@@ -35,18 +38,23 @@ export async function POST(req: Request) {
     });
   }
 
+  // Set up streaming response
   const encoder = new TextEncoder();
   const stream = new TransformStream();
   const writer = stream.writable.getWriter();
 
+  // Helper function to write chunks of data to the stream
   const writeChunk = async (model: string, content: string) => {
     await writer.write(encoder.encode(`data: ${JSON.stringify({ model, content })}\n\n`));
   };
 
   const streamResponse = async () => {
     try {
+      // Prepare messages for both Haiku and Sonnet models
       const haikuMessages = [...haikuHistory, { role: 'user', content: prompt }];
       const sonnetMessages = [...sonnetHistory, { role: 'user', content: prompt }];
+
+      // Stream responses from both models concurrently
       const [haikuStream, sonnetStream] = await Promise.all([
         anthropic.messages.stream({
           model: "claude-3-haiku-20240307",
@@ -63,6 +71,7 @@ export async function POST(req: Request) {
       let haikuResponse = "";
       let sonnetResponse = "";
 
+      // Process and stream both responses simultaneously
       for await (const [haikuEvent, sonnetEvent] of zip(haikuStream, sonnetStream)) {
         if (haikuEvent.type === 'content_block_delta' && 'text' in haikuEvent.delta) {
           haikuResponse += haikuEvent.delta.text;
@@ -74,7 +83,7 @@ export async function POST(req: Request) {
         }
       }
 
-      // Store the responses in Supabase
+      // Log responses in Supabase for analysis and tracking
       try {
         const [haikuResult, sonnetResult] = await Promise.all([
           supabase.from('verzero_log').insert({
@@ -116,8 +125,10 @@ export async function POST(req: Request) {
     }
   };
 
+  // Start the streaming process
   streamResponse();
 
+  // Return the stream as the response
   return new Response(stream.readable, {
     headers: {
       'Content-Type': 'text/event-stream',
@@ -127,6 +138,7 @@ export async function POST(req: Request) {
   });
 }
 
+// Helper function to process multiple async iterables concurrently
 async function* zip(...iterables: AsyncIterable<unknown>[]) {
   const iterators = iterables.map(i => i[Symbol.asyncIterator]());
   while (true) {
@@ -136,5 +148,6 @@ async function* zip(...iterables: AsyncIterable<unknown>[]) {
   }
 }
 
+// Debug logging for Supabase environment variables
 console.log('NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
 console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
