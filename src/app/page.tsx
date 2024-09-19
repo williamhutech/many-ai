@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 export default function SDKPlayground() {
+  // State management for the application
   const [models, setModels] = useState(['sonnet', 'haiku']);
   const [input, setInput] = useState('');
   const [results, setResults] = useState(['', '']);
@@ -32,22 +33,24 @@ export default function SDKPlayground() {
     Array<{ role: string; content: string }>
   >([]);
 
+  // Initialize session and clear history on component mount
   useEffect(() => {
     const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
-    // Clear local storage on page load/refresh
     localStorage.removeItem('haikuHistory');
     localStorage.removeItem('sonnetHistory');
     setHaikuHistory([]);
     setSonnetHistory([]);
   }, []);
 
+  // Handle model selection change
   const handleModelChange = (index: number, value: string) => {
     const newModels = [...models];
     newModels[index] = value;
     setModels(newModels);
   };
 
+  // Handle form submission and fetch responses from models
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sessionId) return;
@@ -56,6 +59,7 @@ export default function SDKPlayground() {
 
     const fetchModelResponse = async (index: number) => {
       try {
+        // Fetch response from the API
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -76,6 +80,7 @@ export default function SDKPlayground() {
           throw new Error('Response body is null');
         }
 
+        // Process the streamed response
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
@@ -93,8 +98,11 @@ export default function SDKPlayground() {
               try {
                 const data = JSON.parse(line.slice(6));
                 modelResponse += data.content;
-                newResults[index] = modelResponse.trim();
-                setResults([...newResults]);
+                setResults(prevResults => {
+                  const newResults = [...prevResults];
+                  newResults[index] = modelResponse;
+                  return newResults;
+                });
               } catch (error) {
                 console.error('Error parsing JSON:', error);
               }
@@ -102,51 +110,31 @@ export default function SDKPlayground() {
           }
         }
 
-        // Update history with the raw response
-        const historyUpdate = { role: 'assistant', content: modelResponse.trim() };
+        // Update conversation history
+        const historyUpdate = { role: 'assistant', content: modelResponse };
         if (models[index] === 'haiku') {
-          setHaikuHistory((prev) => [
-            ...prev,
-            { role: 'user', content: input },
-            historyUpdate,
-          ]);
-          localStorage.setItem(
-            'haikuHistory',
-            JSON.stringify([
-              ...haikuHistory,
-              { role: 'user', content: input },
-              historyUpdate,
-            ])
-          );
+          setHaikuHistory(prev => [...prev, { role: 'user', content: input }, historyUpdate]);
+          localStorage.setItem('haikuHistory', JSON.stringify([...haikuHistory, { role: 'user', content: input }, historyUpdate]));
         } else if (models[index] === 'sonnet') {
-          setSonnetHistory((prev) => [
-            ...prev,
-            { role: 'user', content: input },
-            historyUpdate,
-          ]);
-          localStorage.setItem(
-            'sonnetHistory',
-            JSON.stringify([
-              ...sonnetHistory,
-              { role: 'user', content: input },
-              historyUpdate,
-            ])
-          );
+          setSonnetHistory(prev => [...prev, { role: 'user', content: input }, historyUpdate]);
+          localStorage.setItem('sonnetHistory', JSON.stringify([...sonnetHistory, { role: 'user', content: input }, historyUpdate]));
         }
       } catch (error) {
-        newResults[index] = `Error: ${
-          error instanceof Error ? error.message : 'Failed to fetch response'
-        }`;
-        setResults([...newResults]);
+        setResults(prevResults => {
+          const newResults = [...prevResults];
+          newResults[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
+          return newResults;
+        });
       }
     };
 
-    // Send both requests simultaneously
+    // Fetch responses from both models simultaneously
     await Promise.all([fetchModelResponse(0), fetchModelResponse(1)]);
 
     setIsLoading(false);
   };
 
+  // Render the user interface
   return (
     <div className="flex flex-col min-h-screen">
       <header className="border-b border-border px-6 py-4">
@@ -188,29 +176,31 @@ export default function SDKPlayground() {
         </div>
       </main>
       <footer className="border-t border-border px-6 py-4">
-        <form onSubmit={handleSubmit} className="flex items-end space-x-4">
-          <div className="flex-1">
-            <Label htmlFor="message-input" className="mb-1">
-              What would you like to ask...
-            </Label>
-            <Input
-              id="message-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your question..."
-              className="w-full"
-            />
+        <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4">
+          <div className="w-full flex items-end space-x-4">
+            <div className="flex-1">
+              <Input
+                id="message-input"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your message..."
+                className="w-full"
+              />
+            </div>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent inline-block"></span>
+                  Generating...
+                </>
+              ) : (
+                'Send'
+              )}
+            </Button>
           </div>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent inline-block"></span>
-                Generating...
-              </>
-            ) : (
-              'Send'
-            )}
-          </Button>
+          <p className="text-sm text-gray-500 text-center">
+            AI can make mistakes. Check important info.
+          </p>
         </form>
       </footer>
     </div>
