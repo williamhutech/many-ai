@@ -1,24 +1,32 @@
-import * as React from "react"
+import * as React from "react";
+import ReactMarkdown from "react-markdown";
+import { cn } from "@/lib/utils";
+import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 
-import { cn } from "@/lib/utils"
+export interface TextareaProps {
+  value?: string;
+  className?: string;
+}
 
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+const Textarea = ({ value, className }: TextareaProps) => {
+  return (
+    // Use a div to display formatted content
+    <div
+      className={cn(
+      "prose prose-sm max-w-none min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 overflow-y-auto",
+        className
+      )}
+    >
+      {/* Render the Markdown content */}
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
+      >
+        {value || ""}
+      </ReactMarkdown>
+    </div>
+  );
+};
 
-const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, ...props }, ref) => {
-    return (
-      <textarea
-        className={cn(
-          "flex min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus-visible:ring-zinc-300",
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Textarea.displayName = "Textarea"
-
-export { Textarea }
+export { Textarea };

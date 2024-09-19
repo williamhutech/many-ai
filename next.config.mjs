@@ -7,7 +7,7 @@ const nextConfig = {
         ...config.resolve.fallback,
         punycode: false,
       };
-    }
+      };
     return config;
   },
 };
