@@ -43,8 +43,7 @@ export async function POST(req: Request) {
 
   // Helper function to write chunks of data to the stream
   const writeChunk = async (content: string) => {
-    const cleanedContent = content.replace(/\s+/g, ' ').trim();
-    await writer.write(encoder.encode(`data: ${JSON.stringify({ content: cleanedContent })}\n\n`));
+    await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
   };
 
   const streamResponse = async () => {

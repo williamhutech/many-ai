@@ -4,11 +4,13 @@ import { cn } from "@/lib/utils";
 import remarkGfm from "remark-gfm";
 import rehypeSanitize from "rehype-sanitize";
 
+// Define the props for the Textarea component
 export interface TextareaProps {
   value?: string;
   className?: string;
 }
 
+// Textarea component for rendering Markdown content
 const Textarea = ({ value, className }: TextareaProps) => {
   return (
     // Use a div to display formatted content

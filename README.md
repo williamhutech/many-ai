@@ -18,6 +18,7 @@ bun dev
 ```
 
 
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Features
@@ -26,12 +27,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - Streams responses in real-time
 - Maintains conversation history for both models
 - Stores responses in Supabase for analysis and tracking
-
-## Project Structure
-
-- `src/app/page.tsx`: Main page component with user interface
-- `src/app/api/generate/route.ts`: API route for generating responses from Claude models
-- `src/app/globals.css`: Global styles for the application
+- Supports multiple AI models (Claude 3 Sonnet, Claude 3 Haiku, OpenAI, Anthropic, Cohere)
 
 ## Environment Variables
 
@@ -41,6 +37,18 @@ Make sure to set up the following environment variables:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
 - `ANTHROPIC_API_KEY`: Your Anthropic API key
 
+## Dependencies
+
+This project uses several key dependencies:
+
+- Next.js for the React framework
+- @anthropic-ai/sdk for interacting with Claude models
+- @supabase/supabase-js for database interactions
+- react-markdown for rendering Markdown content
+- tailwindcss for styling
+
+For a full list of dependencies, refer to the `package.json` file.
+
 ## Learn More
 
 To learn more about the technologies used in this project, check out the following resources:
@@ -48,6 +56,7 @@ To learn more about the technologies used in this project, check out the followi
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Anthropic API Documentation](https://docs.anthropic.com)
 - [Supabase Documentation](https://supabase.io/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 
 ## Deploy on Vercel
 

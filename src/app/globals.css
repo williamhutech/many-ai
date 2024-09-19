@@ -10,6 +10,15 @@
 :root {
   --background: #f3f5f7;
   --foreground: #171717;
+  --border: #e5e7eb;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover-foreground: #171717;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --primary: #3b82f6;
+  --destructive-foreground: #ffffff;
+  --radius: 0.5rem;
 }
 
 /* Define dark mode color variables */
@@ -17,6 +26,14 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --border: #27272a;
+    --card: #18181b;
+    --card-foreground: #ededed;
+    --popover-foreground: #ededed;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --primary: #3b82f6;
+    --destructive-foreground: #fef2f2;
   }
 }
 
@@ -34,9 +51,8 @@ body {
   }
 }
 
-/* Define custom border radius variable */
-@layer base {
-  :root {
-    --radius: 0.5rem;
-  }
+/* Ensure proper spacing for paragraphs in Markdown content */
+.prose p {
+  margin-top: 1em;
+  margin-bottom: 1em;
 }

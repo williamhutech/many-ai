@@ -137,7 +137,7 @@ export default function SDKPlayground() {
   // Render the user interface
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="border-b border-border px-6 py-4">
+      <header className="bg-white border-b border-border px-6 py-4">
         <h1 className="text-lg font-semibold">Claude 3 Comparison</h1>
       </header>
       <main className="flex-1 container mx-auto p-6 overflow-hidden">
@@ -175,7 +175,7 @@ export default function SDKPlayground() {
           ))}
         </div>
       </main>
-      <footer className="border-t border-border px-6 py-4">
+      <footer className="bg-white border-t border-border px-6 py-4">
         <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4">
           <div className="w-full flex items-end space-x-4">
             <div className="flex-1">
@@ -198,7 +198,7 @@ export default function SDKPlayground() {
               )}
             </Button>
           </div>
-          <p className="text-sm text-gray-500 text-center">
+          <p className="text-xs text-gray-500 text-center">
             AI can make mistakes. Check important info.
           </p>
         </form>
