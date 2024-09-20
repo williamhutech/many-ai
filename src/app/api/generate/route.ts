@@ -40,7 +40,7 @@ const anthropic = new Anthropic({
 type MessageParam = { role: 'user' | 'assistant'; content: string };
 
 export async function POST(req: Request) {
-  const { prompt, sessionId, haikuHistory, sonnetHistory, selectedModel } = await req.json();
+  const { prompt, sessionId, haikuHistory, sonnetHistory, gpt4oHistory, selectedModel } = await req.json();
 
   // Validate input to ensure necessary data is provided
   if (!prompt || !sessionId || !selectedModel) {
@@ -62,44 +62,35 @@ export async function POST(req: Request) {
 
   const streamResponse = async () => {
     try {
-      // Prepare messages based on selected model
       let messages: MessageParam[] = [];
       let modelName = '';
       let modelStream;
 
-      if (selectedModel === 'haiku') {
-        messages = [...haikuHistory, { role: 'user', content: prompt }];
-        modelName = 'claude-3-haiku-20240307';
+      // Set up the model stream based on the selected model
+      if (selectedModel === 'haiku' || selectedModel === 'sonnet') {
+        messages = selectedModel === 'haiku' ? [...haikuHistory, { role: 'user', content: prompt }] : [...sonnetHistory, { role: 'user', content: prompt }];
+        modelName = selectedModel === 'haiku' ? 'claude-3-haiku-20240307' : 'claude-3-sonnet-20240229';
         modelStream = await anthropic.messages.stream({
           model: modelName,
           max_tokens: 1000,
           messages,
         });
-      } else if (selectedModel === 'sonnet') {
-        messages = [...sonnetHistory, { role: 'user', content: prompt }];
-        modelName = 'claude-3-sonnet-20240229';
-        modelStream = await anthropic.messages.stream({
-          model: modelName,
-          max_tokens: 1000,
-          messages,
-        });
-      } else if (selectedModel === 'gpt-4') {
-        messages = [...messages, { role: 'user', content: prompt }];
-        modelName = 'gpt-4';
+      } else if (selectedModel === 'gpt-4o') {
+        messages = [...gpt4oHistory, { role: 'user', content: prompt }];
+        modelName = 'gpt-4o';
         modelStream = await openai.chat.completions.create({
           model: modelName,
           messages,
           stream: true,
         });
       } else {
-        // Handle other models if needed
-        return;
+        throw new Error(`Unsupported model: ${selectedModel}`);
       }
 
       let modelResponse = '';
 
-      // Process and stream the response
-      if (selectedModel === 'gpt-4') {
+      // Process the stream based on the model type
+      if (selectedModel === 'gpt-4o') {
         for await (const chunk of modelStream) {
           if ('choices' in chunk && chunk.choices[0]?.delta?.content) {
             modelResponse += chunk.choices[0].delta.content;
@@ -115,9 +106,17 @@ export async function POST(req: Request) {
         }
       }
 
-      // Log response in Supabase for analysis and tracking
+      // Log the full JSON response for all models
+      const fullResponse = {
+        model: modelName,
+        prompt: prompt,
+        response: modelResponse,
+      };
+      console.log(`Full JSON response for ${modelName}:`, JSON.stringify(fullResponse, null, 2));
+
+      // Log response in Supabase
       try {
-        const { error } = await supabase.from('verzero_log').insert({
+        await supabase.from('verzero_log').insert({
           id: crypto.randomUUID(),
           session_id: sessionId,
           conversation_id: crypto.randomUUID(),
@@ -126,14 +125,9 @@ export async function POST(req: Request) {
           model_response: modelResponse.replace(/\n/g, '\n\n').trim(),
           created_at: new Date().toISOString(),
         });
-
-        if (error) {
-          throw new Error(`Error inserting response: ${error.message}`);
-        }
-
-        console.log('Successfully inserted response into Supabase');
+        console.log(`Response saved to Supabase for model: ${modelName}`);
       } catch (error) {
-        console.error('Error inserting response into Supabase:', error);
+        console.error(`Error saving response to Supabase for model ${modelName}:`, error);
       }
 
       await writer.close();
@@ -146,7 +140,6 @@ export async function POST(req: Request) {
 
   // Start the streaming process
   streamResponse().catch((error) => {
-    console.error('Unhandled error in streamResponse:', error);
   });
 
   // Return the stream as the response

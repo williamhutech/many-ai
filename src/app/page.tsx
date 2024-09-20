@@ -21,15 +21,18 @@ import { Label } from "@/components/ui/label";
 
 export default function SDKPlayground() {
   // State management for the application
-  const [models, setModels] = useState(['sonnet', 'haiku']);
+  const [models, setModels] = useState(['sonnet', 'haiku', 'gpt-4o']);
   const [input, setInput] = useState('');
-  const [results, setResults] = useState(['', '']);
+  const [results, setResults] = useState(['', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [haikuHistory, setHaikuHistory] = useState<
     Array<{ role: string; content: string }>
   >([]);
   const [sonnetHistory, setSonnetHistory] = useState<
+    Array<{ role: string; content: string }>
+  >([]);
+  const [gpt4oHistory, setGpt4oHistory] = useState<
     Array<{ role: string; content: string }>
   >([]);
 
@@ -39,8 +42,10 @@ export default function SDKPlayground() {
     setSessionId(newSessionId);
     localStorage.removeItem('haikuHistory');
     localStorage.removeItem('sonnetHistory');
+    localStorage.removeItem('gpt4History');
     setHaikuHistory([]);
     setSonnetHistory([]);
+    setGpt4oHistory([]);
   }, []);
 
   // Handle model selection change
@@ -55,11 +60,11 @@ export default function SDKPlayground() {
     e.preventDefault();
     if (!sessionId) return;
     setIsLoading(true);
-    const newResults = ['', ''];
+    const newResults = ['', '', ''];
 
     const fetchModelResponse = async (index: number) => {
       try {
-        // Fetch response from the API
+        console.log(`Sending request for model: ${models[index]}`);
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -68,6 +73,7 @@ export default function SDKPlayground() {
             sessionId,
             haikuHistory,
             sonnetHistory,
+            gpt4oHistory,
             selectedModel: models[index],
           }),
         });
@@ -80,7 +86,6 @@ export default function SDKPlayground() {
           throw new Error('Response body is null');
         }
 
-        // Process the streamed response
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
@@ -97,12 +102,16 @@ export default function SDKPlayground() {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
-                modelResponse += data.content;
-                setResults(prevResults => {
-                  const newResults = [...prevResults];
-                  newResults[index] = modelResponse;
-                  return newResults;
-                });
+                if (data.content) {
+                  modelResponse += data.content;
+                  setResults(prevResults => {
+                    const newResults = [...prevResults];
+                    newResults[index] = modelResponse;
+                    return newResults;
+                  });
+                } else if (data.error) {
+                  throw new Error(data.error);
+                }
               } catch (error) {
                 console.error('Error parsing JSON:', error);
               }
@@ -118,8 +127,12 @@ export default function SDKPlayground() {
         } else if (models[index] === 'sonnet') {
           setSonnetHistory(prev => [...prev, { role: 'user', content: input }, historyUpdate]);
           localStorage.setItem('sonnetHistory', JSON.stringify([...sonnetHistory, { role: 'user', content: input }, historyUpdate]));
+        } else if (models[index] === 'gpt-4o') {
+          setGpt4oHistory(prev => [...prev, { role: 'user', content: input }, historyUpdate]);
+          localStorage.setItem('gpt4oHistory', JSON.stringify([...gpt4oHistory, { role: 'user', content: input }, historyUpdate]));
         }
       } catch (error) {
+        console.error(`Error fetching response for ${models[index]}:`, error);
         setResults(prevResults => {
           const newResults = [...prevResults];
           newResults[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
@@ -128,8 +141,8 @@ export default function SDKPlayground() {
       }
     };
 
-    // Fetch responses from both models simultaneously
-    await Promise.all([fetchModelResponse(0), fetchModelResponse(1)]);
+    // Fetch responses from all models simultaneously
+    await Promise.all(models.map((_, index) => fetchModelResponse(index)));
 
     setIsLoading(false);
   };
@@ -141,8 +154,8 @@ export default function SDKPlayground() {
         <h1 className="text-lg font-semibold">Claude 3 Comparison</h1>
       </header>
       <main className="flex-1 container mx-auto p-6 overflow-hidden">
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-          {[0, 1].map((index) => (
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+          {[0, 1, 2].map((index) => (
             <Card key={index} className="flex flex-col h-full max-h-[calc(100vh-200px)]">
               <CardHeader className="flex items-center justify-between p-4">
                 <CardTitle className="text-base font-medium">
@@ -158,9 +171,7 @@ export default function SDKPlayground() {
                   <SelectContent>
                     <SelectItem value="sonnet">Claude 3 Sonnet</SelectItem>
                     <SelectItem value="haiku">Claude 3 Haiku</SelectItem>
-                    <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                    <SelectItem value="cohere">Cohere</SelectItem>
+                    <SelectItem value="gpt-4o">GPT-4o</SelectItem>
                   </SelectContent>
                 </Select>
               </CardHeader>
