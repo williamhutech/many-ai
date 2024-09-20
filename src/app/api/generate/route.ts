@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Anthropic } from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import OpenAI from 'openai';
 
 // Initialize Supabase client for logging responses
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,9 +19,22 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// Initialize OpenAI client for AI model interactions
+const openaiApiKey = process.env.OPENAI_API_KEY;
+if (!openaiApiKey) {
+  throw new Error('Missing OpenAI API key');
+}
+const openai = new OpenAI({
+  apiKey: openaiApiKey,
+});
+
 // Initialize Anthropic client for AI model interactions
+const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+if (!anthropicApiKey) {
+  throw new Error('Missing Anthropic API key');
+}
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: anthropicApiKey,
 });
 
 type MessageParam = { role: 'user' | 'assistant'; content: string };
@@ -51,32 +65,53 @@ export async function POST(req: Request) {
       // Prepare messages based on selected model
       let messages: MessageParam[] = [];
       let modelName = '';
+      let modelStream;
 
       if (selectedModel === 'haiku') {
         messages = [...haikuHistory, { role: 'user', content: prompt }];
         modelName = 'claude-3-haiku-20240307';
+        modelStream = await anthropic.messages.stream({
+          model: modelName,
+          max_tokens: 1000,
+          messages,
+        });
       } else if (selectedModel === 'sonnet') {
         messages = [...sonnetHistory, { role: 'user', content: prompt }];
         modelName = 'claude-3-sonnet-20240229';
+        modelStream = await anthropic.messages.stream({
+          model: modelName,
+          max_tokens: 1000,
+          messages,
+        });
+      } else if (selectedModel === 'gpt-4') {
+        messages = [...messages, { role: 'user', content: prompt }];
+        modelName = 'gpt-4';
+        modelStream = await openai.chat.completions.create({
+          model: modelName,
+          messages,
+          stream: true,
+        });
       } else {
         // Handle other models if needed
         return;
       }
 
-      // Stream response from the selected model
-      const modelStream = await anthropic.messages.stream({
-        model: modelName,
-        max_tokens: 1000,
-        messages,
-      });
-
       let modelResponse = '';
 
       // Process and stream the response
-      for await (const event of modelStream) {
-        if (event.type === 'content_block_delta' && 'text' in event.delta) {
-          modelResponse += event.delta.text;
-          await writeChunk(event.delta.text);
+      if (selectedModel === 'gpt-4') {
+        for await (const chunk of modelStream) {
+          if ('choices' in chunk && chunk.choices[0]?.delta?.content) {
+            modelResponse += chunk.choices[0].delta.content;
+            await writeChunk(chunk.choices[0].delta.content);
+          }
+        }
+      } else {
+        for await (const event of modelStream) {
+          if ('type' in event && event.type === 'content_block_delta' && 'delta' in event && 'text' in event.delta) {
+            modelResponse += event.delta.text;
+            await writeChunk(event.delta.text);
+          }
         }
       }
 
@@ -103,13 +138,16 @@ export async function POST(req: Request) {
 
       await writer.close();
     } catch (error) {
-      console.error('Error:', error);
-      await writer.abort();
+      console.error('Error in streamResponse:', error);
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ error: 'An error occurred during processing' })}\n\n`));
+      await writer.close();
     }
   };
 
   // Start the streaming process
-  streamResponse();
+  streamResponse().catch((error) => {
+    console.error('Unhandled error in streamResponse:', error);
+  });
 
   // Return the stream as the response
   return new Response(stream.readable, {
