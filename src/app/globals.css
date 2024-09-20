@@ -51,8 +51,15 @@ body {
   }
 }
 
+/* Custom utility class for smaller text */
+@layer utilities {
+  .text-xs-custom {
+    font-size: 0.8rem; /* Equivalent to text-xs in Tailwind */
+  }
+}
+
 /* Ensure proper spacing for paragraphs in Markdown content */
 .prose p {
-  margin-top: 1em;
-  margin-bottom: 1em;
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
 }

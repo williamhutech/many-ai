@@ -42,7 +42,7 @@ export default function SDKPlayground() {
     setSessionId(newSessionId);
     localStorage.removeItem('haikuHistory');
     localStorage.removeItem('sonnetHistory');
-    localStorage.removeItem('gpt4History');
+    localStorage.removeItem('gpt4oHistory');
     setHaikuHistory([]);
     setSonnetHistory([]);
     setGpt4oHistory([]);
@@ -61,6 +61,7 @@ export default function SDKPlayground() {
     if (!sessionId) return;
     setIsLoading(true);
     const newResults = ['', '', ''];
+    const currentInput = input; // Store the current input
 
     const fetchModelResponse = async (index: number) => {
       try {
@@ -69,7 +70,7 @@ export default function SDKPlayground() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: input,
+            prompt: currentInput,
             sessionId,
             haikuHistory,
             sonnetHistory,
@@ -122,14 +123,14 @@ export default function SDKPlayground() {
         // Update conversation history
         const historyUpdate = { role: 'assistant', content: modelResponse };
         if (models[index] === 'haiku') {
-          setHaikuHistory(prev => [...prev, { role: 'user', content: input }, historyUpdate]);
-          localStorage.setItem('haikuHistory', JSON.stringify([...haikuHistory, { role: 'user', content: input }, historyUpdate]));
+          setHaikuHistory(prev => [...prev, { role: 'user', content: currentInput }, historyUpdate]);
+          localStorage.setItem('haikuHistory', JSON.stringify([...haikuHistory, { role: 'user', content: currentInput }, historyUpdate]));
         } else if (models[index] === 'sonnet') {
-          setSonnetHistory(prev => [...prev, { role: 'user', content: input }, historyUpdate]);
-          localStorage.setItem('sonnetHistory', JSON.stringify([...sonnetHistory, { role: 'user', content: input }, historyUpdate]));
+          setSonnetHistory(prev => [...prev, { role: 'user', content: currentInput }, historyUpdate]);
+          localStorage.setItem('sonnetHistory', JSON.stringify([...sonnetHistory, { role: 'user', content: currentInput }, historyUpdate]));
         } else if (models[index] === 'gpt-4o') {
-          setGpt4oHistory(prev => [...prev, { role: 'user', content: input }, historyUpdate]);
-          localStorage.setItem('gpt4oHistory', JSON.stringify([...gpt4oHistory, { role: 'user', content: input }, historyUpdate]));
+          setGpt4oHistory(prev => [...prev, { role: 'user', content: currentInput }, historyUpdate]);
+          localStorage.setItem('gpt4oHistory', JSON.stringify([...gpt4oHistory, { role: 'user', content: currentInput }, historyUpdate]));
         }
       } catch (error) {
         console.error(`Error fetching response for ${models[index]}:`, error);
@@ -145,6 +146,7 @@ export default function SDKPlayground() {
     await Promise.all(models.map((_, index) => fetchModelResponse(index)));
 
     setIsLoading(false);
+    setInput(''); // Clear the input after successful request
   };
 
   // Render the user interface
@@ -178,7 +180,7 @@ export default function SDKPlayground() {
               <CardContent className="p-4 pt-0 flex-1 max-h-[calc(100vh-300px)] overflow-y-auto">
                 <Textarea
                   value={results[index]}
-                  className="h-full w-full"
+                  className="h-full w-full text-xs-custom"
                   aria-placeholder="Response will appear here..."
                 />
               </CardContent>
@@ -194,8 +196,8 @@ export default function SDKPlayground() {
                 id="message-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
-                className="w-full"
+                placeholder={results.some(result => result !== '') ? input : 'Enter your message...'}
+                className="w-full placeholder-gray-500 placeholder-opacity-100 focus:placeholder-opacity-0"
               />
             </div>
             <Button type="submit" disabled={isLoading}>
