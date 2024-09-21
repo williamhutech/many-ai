@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export default function SDKPlayground() {
   // State management for the application
@@ -35,6 +36,8 @@ export default function SDKPlayground() {
   const [gpt4oHistory, setGpt4oHistory] = useState<
     Array<{ role: string; content: string }>
   >([]);
+  const handleTitleClick = () => {window.location.reload();
+  };
 
   // Initialize session and clear history on component mount
   useEffect(() => {
@@ -60,8 +63,8 @@ export default function SDKPlayground() {
     e.preventDefault();
     if (!sessionId) return;
     setIsLoading(true);
-    const newResults = ['', '', ''];
     const currentInput = input; // Store the current input
+    setInput(''); // Clear the input immediately after submission
 
     const fetchModelResponse = async (index: number) => {
       try {
@@ -146,46 +149,77 @@ export default function SDKPlayground() {
     await Promise.all(models.map((_, index) => fetchModelResponse(index)));
 
     setIsLoading(false);
-    setInput(''); // Clear the input after successful request
   };
 
   // Render the user interface
   return (
     <div className="flex flex-col min-h-screen">
       <header className="bg-white border-b border-border px-6 py-4">
-        <h1 className="text-lg font-semibold">Claude 3 Comparison</h1>
+        <h1 className="text-lg font-semibold cursor-pointer" onClick={handleTitleClick}>
+          Claude 3 Comparison
+        </h1>
       </header>
       <main className="flex-1 container mx-auto p-6 overflow-hidden">
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-          {[0, 1, 2].map((index) => (
-            <Card key={index} className="flex flex-col h-full max-h-[calc(100vh-200px)]">
-              <CardHeader className="flex items-center justify-between p-4">
-                <CardTitle className="text-base font-medium">
-                  Model {index + 1}
-                </CardTitle>
-                <Select
-                  value={models[index]}
-                  onValueChange={(value) => handleModelChange(index, value)}
-                >
-                  <SelectTrigger className="w-44">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sonnet">Claude 3 Sonnet</SelectItem>
-                    <SelectItem value="haiku">Claude 3 Haiku</SelectItem>
-                    <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 flex-1 max-h-[calc(100vh-300px)] overflow-y-auto">
-                <Textarea
-                  value={results[index]}
-                  className="h-full w-full text-xs-custom"
-                  aria-placeholder="Response will appear here..."
-                />
-              </CardContent>
-            </Card>
-          ))}
+          {[0, 1, 2].map((index) => {
+            const cardRef = useRef<HTMLDivElement>(null);
+            const [isHovering, setIsHovering] = useState(false);
+
+            useEffect(() => {
+              const handleCopy = (e: ClipboardEvent) => {
+                if (isHovering) {
+                  e.preventDefault();
+                  navigator.clipboard.writeText(results[index]);
+                }
+              };
+
+              document.addEventListener('copy', handleCopy);
+
+              return () => {
+                document.removeEventListener('copy', handleCopy);
+              };
+            }, [results, index, isHovering]);
+
+            return (
+              <Card 
+                key={index} 
+                className={cn(
+                  "flex flex-col h-full max-h-[calc(100vh-250px)]",
+                  "hover:border-gray-500 hover:ring-0.5 hover:ring-gray-500 dark:hover:border-gray-300 dark:hover:ring-gray-300",
+                  "transition-all duration-200"
+                )}
+                ref={cardRef}
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+              >
+                <CardHeader className="flex items-center justify-between p-4">
+                  <CardTitle className="text-base font-medium">
+                    Model {index + 1}
+                  </CardTitle>
+                  <Select
+                    value={models[index]}
+                    onValueChange={(value) => handleModelChange(index, value)}
+                  >
+                    <SelectTrigger className="w-44">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sonnet">Claude 3 Sonnet</SelectItem>
+                      <SelectItem value="haiku">Claude 3 Haiku</SelectItem>
+                      <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 flex-1 max-h-[calc(100vh-300px)] overflow-y-auto">
+                  <Textarea
+                    value={results[index]}
+                    className="h-full w-full text-xs-custom"
+                    aria-placeholder="Response will appear here..."
+                  />
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </main>
       <footer className="bg-white border-t border-border px-6 py-4">
@@ -195,7 +229,12 @@ export default function SDKPlayground() {
               <Input
                 id="message-input"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.currentTarget.style.height = 'auto';
+                  e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                }}
+                onSubmit={handleSubmit}
                 placeholder={results.some(result => result !== '') ? input : 'Enter your message...'}
                 className="w-full placeholder-gray-500 placeholder-opacity-100 focus:placeholder-opacity-0"
               />
