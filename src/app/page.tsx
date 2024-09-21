@@ -161,65 +161,9 @@ export default function SDKPlayground() {
       </header>
       <main className="flex-1 container mx-auto p-6 overflow-hidden">
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-          {[0, 1, 2].map((index) => {
-            const cardRef = useRef<HTMLDivElement>(null);
-            const [isHovering, setIsHovering] = useState(false);
-
-            useEffect(() => {
-              const handleCopy = (e: ClipboardEvent) => {
-                if (isHovering) {
-                  e.preventDefault();
-                  navigator.clipboard.writeText(results[index]);
-                }
-              };
-
-              document.addEventListener('copy', handleCopy);
-
-              return () => {
-                document.removeEventListener('copy', handleCopy);
-              };
-            }, [results, index, isHovering]);
-
-            return (
-              <Card 
-                key={index} 
-                className={cn(
-                  "flex flex-col h-full max-h-[calc(100vh-250px)]",
-                  "hover:border-gray-500 hover:ring-0.5 hover:ring-gray-500 dark:hover:border-gray-300 dark:hover:ring-gray-300",
-                  "transition-all duration-200"
-                )}
-                ref={cardRef}
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
-              >
-                <CardHeader className="flex items-center justify-between p-4">
-                  <CardTitle className="text-base font-medium">
-                    Model {index + 1}
-                  </CardTitle>
-                  <Select
-                    value={models[index]}
-                    onValueChange={(value) => handleModelChange(index, value)}
-                  >
-                    <SelectTrigger className="w-44">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sonnet">Claude 3 Sonnet</SelectItem>
-                      <SelectItem value="haiku">Claude 3 Haiku</SelectItem>
-                      <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </CardHeader>
-                <CardContent className="p-4 pt-0 flex-1 max-h-[calc(100vh-300px)] overflow-y-auto">
-                  <Textarea
-                    value={results[index]}
-                    className="h-full w-full text-xs-custom"
-                    aria-placeholder="Response will appear here..."
-                  />
-                </CardContent>
-              </Card>
-            );
-          })}
+          {[0, 1, 2].map((index) => (
+            <ResultCard key={index} index={index} models={models} results={results} handleModelChange={handleModelChange} />
+          ))}
         </div>
       </main>
       <footer className="bg-white border-t border-border px-6 py-4">
@@ -258,3 +202,67 @@ export default function SDKPlayground() {
     </div>
   );
 }
+
+const ResultCard = ({ index, models, results, handleModelChange }: {
+  index: number;
+  models: string[];
+  results: string[];
+  handleModelChange: (index: number, value: string) => void;
+}) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isHovering, setIsHovering] = useState(false);
+
+  useEffect(() => {
+    const handleCopy = (e: ClipboardEvent) => {
+      if (isHovering) {
+        e.preventDefault();
+        navigator.clipboard.writeText(results[index]);
+      }
+    };
+
+    document.addEventListener('copy', handleCopy);
+
+    return () => {
+      document.removeEventListener('copy', handleCopy);
+    };
+  }, [index, isHovering]);
+
+  return (
+    <Card 
+      className={cn(
+        "flex flex-col h-full max-h-[calc(100vh-250px)]",
+        "hover:border-gray-500 hover:ring-0.5 hover:ring-gray-500 dark:hover:border-gray-300 dark:hover:ring-gray-300",
+        "transition-all duration-200"
+      )}
+      ref={cardRef}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      <CardHeader className="flex items-center justify-between p-4">
+        <CardTitle className="text-base font-medium">
+          Model {index + 1}
+        </CardTitle>
+        <Select
+          value={models[index]}
+          onValueChange={(value) => handleModelChange(index, value)}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="sonnet">Claude 3 Sonnet</SelectItem>
+            <SelectItem value="haiku">Claude 3 Haiku</SelectItem>
+            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent className="p-4 pt-0 flex-1 max-h-[calc(100vh-300px)] overflow-y-auto">
+        <Textarea
+          value={results[index]}
+          className="h-full w-full text-xs-custom"
+          aria-placeholder="Response will appear here..."
+        />
+      </CardContent>
+    </Card>
+  );
+};
