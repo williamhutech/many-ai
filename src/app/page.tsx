@@ -19,24 +19,19 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { getAllModels, Model } from '@/config/models';
 
 export default function SDKPlayground() {
   // State management for the application
-  const [models, setModels] = useState(['sonnet', 'haiku', 'gpt-4o']);
+  const [models, setModels] = useState<string[]>(getAllModels().map(model => model.id).slice(0, 3)); // Initialize with first 3 models
   const [input, setInput] = useState('');
   const [results, setResults] = useState(['', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [haikuHistory, setHaikuHistory] = useState<
-    Array<{ role: string; content: string }>
-  >([]);
-  const [sonnetHistory, setSonnetHistory] = useState<
-    Array<{ role: string; content: string }>
-  >([]);
-  const [gpt4oHistory, setGpt4oHistory] = useState<
-    Array<{ role: string; content: string }>
-  >([]);
-  const handleTitleClick = () => {window.location.reload();
+  const [conversationHistories, setConversationHistories] = useState<{ [modelId: string]: Array<{ role: string; content: string }> }>({});
+
+  const handleTitleClick = () => {
+    window.location.reload();
   };
 
   // Initialize session and clear history on component mount
@@ -46,9 +41,7 @@ export default function SDKPlayground() {
     localStorage.removeItem('haikuHistory');
     localStorage.removeItem('sonnetHistory');
     localStorage.removeItem('gpt4oHistory');
-    setHaikuHistory([]);
-    setSonnetHistory([]);
-    setGpt4oHistory([]);
+    setConversationHistories({});
   }, []);
 
   // Handle model selection change
@@ -63,22 +56,21 @@ export default function SDKPlayground() {
     e.preventDefault();
     if (!sessionId) return;
     setIsLoading(true);
-    const currentInput = input; // Store the current input
-    setInput(''); // Clear the input immediately after submission
+    const currentInput = input;
+    setInput('');
 
     const fetchModelResponse = async (index: number) => {
+      const modelId = models[index];
       try {
-        console.log(`Sending request for model: ${models[index]}`);
+        console.log(`Sending request for model: ${modelId}`);
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             prompt: currentInput,
             sessionId,
-            haikuHistory,
-            sonnetHistory,
-            gpt4oHistory,
-            selectedModel: models[index],
+            conversationHistories,
+            selectedModel: modelId,
           }),
         });
 
@@ -123,20 +115,20 @@ export default function SDKPlayground() {
           }
         }
 
-        // Update conversation history
-        const historyUpdate = { role: 'assistant', content: modelResponse };
-        if (models[index] === 'haiku') {
-          setHaikuHistory(prev => [...prev, { role: 'user', content: currentInput }, historyUpdate]);
-          localStorage.setItem('haikuHistory', JSON.stringify([...haikuHistory, { role: 'user', content: currentInput }, historyUpdate]));
-        } else if (models[index] === 'sonnet') {
-          setSonnetHistory(prev => [...prev, { role: 'user', content: currentInput }, historyUpdate]);
-          localStorage.setItem('sonnetHistory', JSON.stringify([...sonnetHistory, { role: 'user', content: currentInput }, historyUpdate]));
-        } else if (models[index] === 'gpt-4o') {
-          setGpt4oHistory(prev => [...prev, { role: 'user', content: currentInput }, historyUpdate]);
-          localStorage.setItem('gpt4oHistory', JSON.stringify([...gpt4oHistory, { role: 'user', content: currentInput }, historyUpdate]));
-        }
+        // Update conversation histories
+        setConversationHistories(prev => {
+          const history = prev[modelId] || [];
+          return {
+            ...prev,
+            [modelId]: [
+              ...history,
+              { role: 'user', content: currentInput },
+              { role: 'assistant', content: modelResponse },
+            ],
+          };
+        });
       } catch (error) {
-        console.error(`Error fetching response for ${models[index]}:`, error);
+        console.error(`Error fetching response for ${modelId}:`, error);
         setResults(prevResults => {
           const newResults = [...prevResults];
           newResults[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
@@ -147,7 +139,6 @@ export default function SDKPlayground() {
 
     // Fetch responses from all models simultaneously
     await Promise.all(models.map((_, index) => fetchModelResponse(index)));
-
     setIsLoading(false);
   };
 
@@ -211,6 +202,11 @@ const ResultCard = ({ index, models, results, handleModelChange }: {
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovering, setIsHovering] = useState(false);
+  const [modelOptions, setModelOptions] = useState<Model[]>([]);
+
+  useEffect(() => {
+    setModelOptions(getAllModels());
+  }, []);
 
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
@@ -250,9 +246,11 @@ const ResultCard = ({ index, models, results, handleModelChange }: {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="sonnet">Claude 3 Sonnet</SelectItem>
-            <SelectItem value="haiku">Claude 3 Haiku</SelectItem>
-            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+            {modelOptions.map(model => (
+              <SelectItem key={model.id} value={model.id}>
+                {model.displayName}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </CardHeader>

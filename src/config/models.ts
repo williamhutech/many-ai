@@ -1,0 +1,56 @@
+import { Anthropic } from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
+
+export interface Model {
+  id: string;
+  displayName: string;
+  maxTokens: number;
+}
+
+export interface AIProvider {
+  name: string;
+  clientName: string; // Name to identify the client
+  models: Model[];
+}
+
+export const aiProviders: AIProvider[] = [
+  {
+    name: 'Anthropic',
+    clientName: 'anthropic',
+    models: [
+      {
+        id: 'claude-3-haiku-20240307',
+        displayName: 'Claude 3 Haiku',
+        maxTokens: 1000,
+      },
+      {
+        id: 'claude-3-sonnet-20240229',
+        displayName: 'Claude 3 Sonnet',
+        maxTokens: 1000,
+      },
+    ],
+  },
+  {
+    name: 'OpenAI',
+    clientName: 'openai',
+    models: [
+      {
+        id: 'gpt-4o',
+        displayName: 'GPT-4o',
+        maxTokens: 1000,
+      },
+    ],
+  },
+];
+
+export const getAllModels = (): Model[] => {
+  return aiProviders.flatMap(provider => provider.models);
+};
+
+export const getModelById = (id: string): Model | undefined => {
+  return getAllModels().find(model => model.id === id);
+};
+
+export const getProviderForModel = (modelId: string): AIProvider | undefined => {
+  return aiProviders.find(provider => provider.models.some(model => model.id === modelId));
+};
