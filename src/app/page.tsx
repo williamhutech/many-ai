@@ -22,19 +22,20 @@ import { cn } from "@/lib/utils";
 import { getAllModels, Model } from '@/config/models';
 
 export default function SDKPlayground() {
-  // State management for the application
-  const [models, setModels] = useState<string[]>(getAllModels().map(model => model.id).slice(0, 3)); // Initialize with first 3 models
+  // Initialize state variables for models, input, results, loading, session, and conversation histories
+  const [models, setModels] = useState<string[]>(getAllModels().map(model => model.id).slice(0, 3));
   const [input, setInput] = useState('');
   const [results, setResults] = useState(['', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [conversationHistories, setConversationHistories] = useState<{ [modelId: string]: Array<{ role: string; content: string }> }>({});
 
+  // Reload the page when the title is clicked
   const handleTitleClick = () => {
     window.location.reload();
   };
 
-  // Initialize session and clear history on component mount
+  // Set up a new session and clear conversation histories on component mount
   useEffect(() => {
     const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
@@ -44,14 +45,14 @@ export default function SDKPlayground() {
     setConversationHistories({});
   }, []);
 
-  // Handle model selection change
+  // Update the selected model for a specific index
   const handleModelChange = (index: number, value: string) => {
     const newModels = [...models];
     newModels[index] = value;
     setModels(newModels);
   };
 
-  // Handle form submission and fetch responses from models
+  // Handle form submission and fetch responses from selected models
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sessionId) return;
@@ -59,6 +60,7 @@ export default function SDKPlayground() {
     const currentInput = input;
     setInput('');
 
+    // Function to fetch response for a single model
     const fetchModelResponse = async (index: number) => {
       const modelId = models[index];
       try {
@@ -142,14 +144,17 @@ export default function SDKPlayground() {
     setIsLoading(false);
   };
 
-  // Render the user interface
+  // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Header */}
       <header className="bg-white border-b border-border px-6 py-4">
         <h1 className="text-lg font-semibold cursor-pointer" onClick={handleTitleClick}>
           Claude 3 Comparison
         </h1>
       </header>
+
+      {/* Main content area with result cards */}
       <main className="flex-1 container mx-auto p-6 overflow-hidden">
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
           {[0, 1, 2].map((index) => (
@@ -157,6 +162,8 @@ export default function SDKPlayground() {
           ))}
         </div>
       </main>
+
+      {/* Footer with input form */}
       <footer className="bg-white border-t border-border px-6 py-4">
         <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4">
           <div className="w-full flex items-end space-x-4">
@@ -194,6 +201,7 @@ export default function SDKPlayground() {
   );
 }
 
+// Render a card component for displaying model results
 const ResultCard = ({ index, models, results, handleModelChange }: {
   index: number;
   models: string[];
@@ -204,10 +212,12 @@ const ResultCard = ({ index, models, results, handleModelChange }: {
   const [isHovering, setIsHovering] = useState(false);
   const [modelOptions, setModelOptions] = useState<Model[]>([]);
 
+  // Load model options on component mount
   useEffect(() => {
     setModelOptions(getAllModels());
   }, []);
 
+  // Set up event listener for copying result text
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
       if (isHovering) {
@@ -223,6 +233,7 @@ const ResultCard = ({ index, models, results, handleModelChange }: {
     };
   }, [index, isHovering]);
 
+  // Render the result card UI
   return (
     <Card 
       className={cn(
