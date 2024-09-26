@@ -1,6 +1,7 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 
+// Define interfaces for Model and AIProvider
 export interface Model {
   id: string;
   displayName: string;
@@ -13,6 +14,7 @@ export interface AIProvider {
   models: Model[];
 }
 
+// Define the available AI providers and their models
 export const aiProviders: AIProvider[] = [
   {
     name: 'Anthropic',
@@ -43,14 +45,17 @@ export const aiProviders: AIProvider[] = [
   },
 ];
 
+// Function to get all available models
 export const getAllModels = (): Model[] => {
   return aiProviders.flatMap(provider => provider.models);
 };
 
+// Function to get a specific model by its ID
 export const getModelById = (id: string): Model | undefined => {
   return getAllModels().find(model => model.id === id);
 };
 
+// Function to get the provider for a specific model
 export const getProviderForModel = (modelId: string): AIProvider | undefined => {
   return aiProviders.find(provider => provider.models.some(model => model.id === modelId));
 };
