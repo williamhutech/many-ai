@@ -43,6 +43,22 @@ export const aiProviders: AIProvider[] = [
       },
     ],
   },
+  {
+    name: 'Google',
+    clientName: 'google',
+    models: [
+      {
+        id: 'gemini-1.5-pro-002',
+        displayName: 'Gemini 1.5 Pro',
+        maxTokens: 1000,
+      },
+      {
+        id: 'gemini-1.5-flash-002',
+        displayName: 'Gemini 1.5 Flash',
+        maxTokens: 1000,
+      },
+    ],
+  },
 ];
 
 // Function to get all available models

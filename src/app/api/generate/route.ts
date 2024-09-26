@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import OpenAI from 'openai';
 import { Anthropic } from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Supabase client for logging responses
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,8 +24,9 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Initialize AI clients at the top level
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const openaiApiKey = process.env.OPENAI_API_KEY;
+const googleApiKey = process.env.GOOGLE_API_KEY;
 
-if (!anthropicApiKey || !openaiApiKey) {
+if (!anthropicApiKey || !openaiApiKey || !googleApiKey) {
   throw new Error('Missing AI API keys');
 }
 
@@ -36,10 +38,13 @@ const openaiClient = new OpenAI({
   apiKey: openaiApiKey,
 });
 
+const googleClient = new GoogleGenerativeAI(googleApiKey);
+
 // Map client names to instances
 const aiClients = {
   anthropic: anthropicClient,
   openai: openaiClient,
+  google: googleClient,
 };
 
 type MessageParam = { role: 'user' | 'assistant'; content: string };
@@ -118,6 +123,22 @@ export async function POST(req: Request) {
             modelResponse += chunk.choices[0].delta.content;
             await writeChunk(chunk.choices[0].delta.content);
           }
+        }
+      } else if (provider.clientName === 'google') {
+        const model = googleClient.getGenerativeModel({ model: selectedModel });
+        const chat = model.startChat({
+          history: history.map((msg: { role: string; content: string }) => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: msg.content,
+          })),
+        });
+
+        const result = await chat.sendMessageStream(prompt);
+
+        for await (const chunk of result.stream) {
+          const chunkText = chunk.text();
+          modelResponse += chunkText;
+          await writeChunk(chunkText);
         }
       }
 

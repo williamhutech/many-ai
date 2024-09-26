@@ -23,11 +23,11 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Features
 
-- Compares responses from Claude 3 Haiku and Claude 3 Sonnet models
+- Compares responses from Claude 3 Haiku, Claude 3 Sonnet, OpenAI, and Google Gemini models
 - Streams responses in real-time
-- Maintains conversation history for both models
+- Maintains conversation history for all models
 - Stores responses in Supabase for analysis and tracking
-- Supports multiple AI models (Claude 3 Sonnet, Claude 3 Haiku, OpenAI, Anthropic, Cohere)
+- Supports multiple AI models (Claude 3 Sonnet, Claude 3 Haiku, OpenAI, Anthropic, Google Gemini)
 
 ## Environment Variables
 
@@ -37,6 +37,7 @@ Make sure to set up the following environment variables:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
 - `ANTHROPIC_API_KEY`: Your Anthropic API key
 - `OPENAI_API_KEY`: Your OpenAI API key
+- `GOOGLE_API_KEY`: Your Google API key
 
 ## Dependencies
 
