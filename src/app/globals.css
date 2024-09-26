@@ -1,4 +1,4 @@
-/* Import Inter font from Google Fonts */
+/* Import Inter font for consistent typography */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
 /* Include Tailwind CSS base styles */
@@ -6,7 +6,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Define light mode color variables */
+/* Define light mode color variables for theming */
 :root {
   --background: #f3f5f7;
   --foreground: #171717;
@@ -21,7 +21,7 @@
   --radius: 0.5rem;
 }
 
-/* Define dark mode color variables */
+/* Define dark mode color variables for theming */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -37,14 +37,14 @@
   }
 }
 
-/* Apply base styles to the body */
+/* Apply base styles to the body for consistent look */
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
 
-/* Custom utility class for text wrapping */
+/* Custom utility class for balanced text wrapping */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
