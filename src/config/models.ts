@@ -59,6 +59,17 @@ export const aiProviders: AIProvider[] = [
       },
     ],
   },
+  {
+    name: 'Meta',
+    clientName: 'meta',
+    models: [
+      {
+        id: 'meta-llama/Meta-Llama-3.1-70B-Instruct',
+        displayName: 'Meta-Llama 3.1',
+        maxTokens: 1000,
+      },
+    ],
+  },
 ];
 
 // Function to get all available models
