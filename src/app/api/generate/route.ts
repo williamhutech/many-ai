@@ -6,6 +6,7 @@ import OpenAI from 'openai';
 import { Anthropic } from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import axios from 'axios'; // Add this import for Meta-Llama
+import { Groq } from 'groq-sdk';
 
 // Initialize Supabase client for logging responses
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,8 +28,9 @@ const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const openaiApiKey = process.env.OPENAI_API_KEY;
 const googleApiKey = process.env.GOOGLE_API_KEY;
 const metaLlamaApiKey = process.env.META_LLAMA_API_KEY;
+const groqApiKey = process.env.GROQ_API_KEY;
 
-if (!anthropicApiKey || !openaiApiKey || !googleApiKey || !metaLlamaApiKey) {
+if (!anthropicApiKey || !openaiApiKey || !googleApiKey || !metaLlamaApiKey || !groqApiKey) {
   throw new Error('Missing AI API keys');
 }
 
@@ -48,12 +50,17 @@ const metaLlamaClient = new OpenAI({
   apiKey: metaLlamaApiKey,
 });
 
+const groqClient = new Groq({
+  apiKey: groqApiKey,
+});
+
 // Map client names to instances
 const aiClients = {
   anthropic: anthropicClient,
   openai: openaiClient,
   google: googleClient,
   meta: metaLlamaClient,
+  groq: groqClient,
 };
 
 type MessageParam = { role: 'user' | 'assistant'; content: string };
@@ -167,6 +174,19 @@ export async function POST(req: Request) {
             const content = chunk.choices[0].delta.content;
             modelResponse += content;
             await writeChunk(content);
+          }
+        }
+      } else if (provider.clientName === 'groq') {
+        modelStream = await (client as Groq).chat.completions.create({
+          model: model.id,
+          messages: history,
+          stream: true,
+        });
+
+        for await (const chunk of modelStream) {
+          if (chunk.choices[0]?.delta?.content) {
+            modelResponse += chunk.choices[0].delta.content;
+            await writeChunk(chunk.choices[0].delta.content);
           }
         }
       }

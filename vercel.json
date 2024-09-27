@@ -11,7 +11,8 @@
             "ANTHROPIC_API_KEY": "@anthropic_api_key",
             "OPENAI_API_KEY": "@openai_api_key",
             "GOOGLE_API_KEY": "@google_api_key",
-            "META_LLAMA_API_KEY": "@meta_llama_api_key"
+            "META_LLAMA_API_KEY": "@meta_llama_api_key",
+            "GROQ_API_KEY": "@groq_api_key"
           }
         }
       }
