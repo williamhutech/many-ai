@@ -5,6 +5,8 @@ import { randomUUID } from 'crypto';
 import OpenAI from 'openai';
 import { Anthropic } from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios from 'axios'; // Add this import for Meta-Llama
+import { Groq } from 'groq-sdk';
 
 // Initialize Supabase client for logging responses
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -25,8 +27,10 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const openaiApiKey = process.env.OPENAI_API_KEY;
 const googleApiKey = process.env.GOOGLE_API_KEY;
+const metaLlamaApiKey = process.env.META_LLAMA_API_KEY;
+const groqApiKey = process.env.GROQ_API_KEY;
 
-if (!anthropicApiKey || !openaiApiKey || !googleApiKey) {
+if (!anthropicApiKey || !openaiApiKey || !googleApiKey || !metaLlamaApiKey || !groqApiKey) {
   throw new Error('Missing AI API keys');
 }
 
@@ -40,11 +44,23 @@ const openaiClient = new OpenAI({
 
 const googleClient = new GoogleGenerativeAI(googleApiKey);
 
+// Add Meta-Llama client
+const metaLlamaClient = new OpenAI({
+  baseURL: 'https://api.deepinfra.com/v1/openai',
+  apiKey: metaLlamaApiKey,
+});
+
+const groqClient = new Groq({
+  apiKey: groqApiKey,
+});
+
 // Map client names to instances
 const aiClients = {
   anthropic: anthropicClient,
   openai: openaiClient,
   google: googleClient,
+  meta: metaLlamaClient,
+  groq: groqClient,
 };
 
 type MessageParam = { role: 'user' | 'assistant'; content: string };
@@ -139,6 +155,39 @@ export async function POST(req: Request) {
           const chunkText = chunk.text();
           modelResponse += chunkText;
           await writeChunk(chunkText);
+        }
+      } else if (provider.clientName === 'meta') {
+        const completion = await metaLlamaClient.chat.completions.create({
+          messages: [
+            ...history.map((msg: { role: string; content: string }) => ({
+              role: msg.role as 'user' | 'assistant',
+              content: msg.content
+            })),
+            { role: 'user', content: prompt }
+          ],
+          model: model.id,
+          stream: true,
+        });
+
+        for await (const chunk of completion) {
+          if (chunk.choices[0].delta.content) {
+            const content = chunk.choices[0].delta.content;
+            modelResponse += content;
+            await writeChunk(content);
+          }
+        }
+      } else if (provider.clientName === 'groq') {
+        modelStream = await (client as Groq).chat.completions.create({
+          model: model.id,
+          messages: history,
+          stream: true,
+        });
+
+        for await (const chunk of modelStream) {
+          if (chunk.choices[0]?.delta?.content) {
+            modelResponse += chunk.choices[0].delta.content;
+            await writeChunk(chunk.choices[0].delta.content);
+          }
         }
       }
 
