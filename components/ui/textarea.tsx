@@ -13,11 +13,10 @@ export interface TextareaProps {
 // Textarea component for rendering Markdown content
 const Textarea = ({ value, className }: TextareaProps) => {
   return (
-    // Use a div to display formatted content
     <div
       className={cn(
         "prose prose-sm max-w-none min-h-[80px] w-full bg-white px-3 py-2 overflow-y-auto",
-        "rounded-sm", // Change this from rounded-md to rounded-sm
+        "rounded-sm",
         "border-none",
         className
       )}

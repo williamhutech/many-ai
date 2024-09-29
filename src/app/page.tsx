@@ -62,7 +62,15 @@ export default function SDKPlayground() {
   // Update the selected model for a specific index
   const handleModelChange = (index: number, value: string) => {
     const newModels = [...models];
-    newModels[index] = value;
+    const existingIndex = newModels.findIndex(model => model === value);
+
+    if (existingIndex !== -1 && existingIndex !== index) {
+      // Swap the models
+      [newModels[index], newModels[existingIndex]] = [newModels[existingIndex], newModels[index]];
+    } else {
+      newModels[index] = value;
+    }
+
     setModels(newModels);
     localStorage.setItem('selectedModels', JSON.stringify(newModels));
   };
@@ -159,13 +167,6 @@ export default function SDKPlayground() {
     setIsLoading(false);
   };
 
-  const handleCopy = (content: string) => {
-    navigator.clipboard.writeText(content).then(() => {
-      setShowCopiedPopup(true);
-      setTimeout(() => setShowCopiedPopup(false), 2000);
-    });
-  };
-
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
@@ -185,7 +186,7 @@ export default function SDKPlayground() {
       <main className="flex-1 container mx-auto p-6 overflow-hidden">
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
           {[0, 1, 2].map((index) => (
-            <ResultCard key={index} index={index} models={models} results={results} handleModelChange={handleModelChange} handleCopy={handleCopy} />
+            <ResultCard key={index} index={index} models={models} results={results} handleModelChange={handleModelChange} />
           ))}
         </div>
       </main>
@@ -235,46 +236,24 @@ export default function SDKPlayground() {
 }
 
 // Render a card component for displaying model results
-const ResultCard = ({ index, models, results, handleModelChange, handleCopy }: {
+const ResultCard = ({ index, models, results, handleModelChange }: {
   index: number;
   models: string[];
   results: string[];
   handleModelChange: (index: number, value: string) => void;
-  handleCopy: (content: string) => void;
 }) => {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
   const [modelOptions, setModelOptions] = useState<Model[]>([]);
 
   useEffect(() => {
     setModelOptions(getAllModels());
   }, []);
 
-  useEffect(() => {
-    const handleCopyEvent = (e: ClipboardEvent) => {
-      if (isHovering) {
-        e.preventDefault();
-        handleCopy(results[index]);
-      }
-    };
-
-    document.addEventListener('copy', handleCopyEvent);
-
-    return () => {
-      document.removeEventListener('copy', handleCopyEvent);
-    };
-  }, [index, isHovering, results, handleCopy]);
-
   return (
     <Card 
       className={cn(
         "flex flex-col h-full max-h-[calc(100vh-250px)]",
-        "hover:border-gray-500 hover:ring-0.5 hover:ring-gray-500 dark:hover:border-gray-300 dark:hover:ring-gray-300",
         "transition-all duration-200"
       )}
-      ref={cardRef}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
     >
       <CardHeader className="flex items-center justify-between p-4">
         <Select

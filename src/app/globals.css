@@ -1,70 +1,59 @@
-/* Import Inter font for consistent typography */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
-/* Include Tailwind CSS base styles */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Define light mode color variables for theming */
-:root {
-  --background: #f9fafb;
-  --foreground: #171717;
-  --border: #e5e7eb;
-  --card: #ffffff;
-  --card-foreground: #171717;
-  --popover-foreground: #171717;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --primary: #3b82f6;
-  --destructive-foreground: #ffffff;
-  --radius: 0.5rem;
-}
-
-/* Define dark mode color variables for theming */
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --border: #27272a;
-    --card: #18181b;
-    --card-foreground: #ededed;
-    --popover-foreground: #ededed;
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-    --primary: #3b82f6;
-    --destructive-foreground: #fef2f2;
+    --background: 0 0% 100%;
+    --foreground: 20 14.3% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 14.3% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14.3% 4.1%;
+    --primary: 24.6 95% 53.1%;
+    --primary-foreground: 60 9.1% 97.8%;
+    --secondary: 60 4.8% 95.9%;
+    --secondary-foreground: 24 9.8% 10%;
+    --muted: 60 4.8% 95.9%;
+    --muted-foreground: 25 5.3% 44.7%;
+    --accent: 60 4.8% 95.9%;
+    --accent-foreground: 24 9.8% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 60 9.1% 97.8%;
+    --border: 20 5.9% 90%;
+    --input: 20 5.9% 90%;
+    --ring: 24.6 95% 53.1%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
 }
 
-/* Apply base styles to the body for consistent look */
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
   font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
 
-/* Custom utility class for balanced text wrapping */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
-}
-
-/* Custom utility class for smaller text */
-@layer utilities {
   .text-xs-custom {
-    font-size: 0.8rem; /* Equivalent to text-xs in Tailwind */
+    font-size: 0.8rem;
   }
 }
 
-/* Ensure proper spacing for paragraphs in Markdown content */
 .prose p {
   margin-top: 0.4em;
   margin-bottom: 0.4em;
 }
 
-/* Copied popup animation */
 .copied-popup {
   animation: fadeInOut 2s ease-in-out;
   opacity: 0;

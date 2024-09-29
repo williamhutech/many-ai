@@ -1,23 +1,34 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  // Enables dark mode using the 'class' strategy for more control
-  darkMode: ["class"],
-  // Specifies which files Tailwind should scan for classes to generate CSS
   content: [
-    "./src/**/*.{js,ts,jsx,tsx,mdx}", // Added src directory
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
-      // Defines custom color variables for consistent theming
       colors: {
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
-        border: 'var(--border)',
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        card: "hsl(var(--card))",
+        "card-foreground": "hsl(var(--card-foreground))",
+        popover: "hsl(var(--popover))",
+        "popover-foreground": "hsl(var(--popover-foreground))",
+        primary: "hsl(var(--primary))",
+        "primary-foreground": "hsl(var(--primary-foreground))",
+        secondary: "hsl(var(--secondary))",
+        "secondary-foreground": "hsl(var(--secondary-foreground))",
+        muted: "hsl(var(--muted))",
+        "muted-foreground": "hsl(var(--muted-foreground))",
+        accent: "hsl(var(--accent))",
+        "accent-foreground": "hsl(var(--accent-foreground))",
+        destructive: "hsl(var(--destructive))",
+        "destructive-foreground": "hsl(var(--destructive-foreground))",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
       },
-      // Sets up custom border radius values for consistent rounded corners
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
@@ -25,10 +36,9 @@ const config: Config = {
       },
     },
   },
-  // Adds additional functionality to Tailwind CSS
   plugins: [
     require("tailwindcss-animate"),
-    require("@tailwindcss/typography"), // Added typography plugin
+    require("@tailwindcss/typography"),
   ],
 };
 
