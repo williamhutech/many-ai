@@ -8,7 +8,7 @@
 
 /* Define light mode color variables for theming */
 :root {
-  --background: #f3f5f7;
+  --background: #f9fafb;
   --foreground: #171717;
   --border: #e5e7eb;
   --card: #ffffff;
@@ -62,4 +62,15 @@ body {
 .prose p {
   margin-top: 0.4em;
   margin-bottom: 0.4em;
+}
+
+/* Copied popup animation */
+.copied-popup {
+  animation: fadeInOut 2s ease-in-out;
+  opacity: 0;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  10%, 90% { opacity: 1; }
 }

@@ -7,6 +7,7 @@ import { Anthropic } from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import axios from 'axios'; // Add this import for Meta-Llama
 import { Groq } from 'groq-sdk';
+import TogetherClient from 'together-ai'; // Fixed import statement
 
 // Initialize Supabase client for logging responses
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,10 +28,11 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const openaiApiKey = process.env.OPENAI_API_KEY;
 const googleApiKey = process.env.GOOGLE_API_KEY;
-const metaLlamaApiKey = process.env.META_LLAMA_API_KEY;
+const deepInfraApiKey = process.env.DEEP_INFRA_API_KEY;;
 const groqApiKey = process.env.GROQ_API_KEY;
+const togetherApiKey = process.env.TOGETHER_API_KEY;
 
-if (!anthropicApiKey || !openaiApiKey || !googleApiKey || !metaLlamaApiKey || !groqApiKey) {
+if (!anthropicApiKey || !openaiApiKey || !googleApiKey || !deepInfraApiKey || !groqApiKey || !togetherApiKey) {
   throw new Error('Missing AI API keys');
 }
 
@@ -45,13 +47,18 @@ const openaiClient = new OpenAI({
 const googleClient = new GoogleGenerativeAI(googleApiKey);
 
 // Add Meta-Llama client
-const metaLlamaClient = new OpenAI({
+const deepInfraClient = new OpenAI({
   baseURL: 'https://api.deepinfra.com/v1/openai',
-  apiKey: metaLlamaApiKey,
+  apiKey: deepInfraApiKey,
 });
 
 const groqClient = new Groq({
   apiKey: groqApiKey,
+});
+
+// Add Together AI client
+const togetherClient = new TogetherClient({
+  apiKey: togetherApiKey,
 });
 
 // Map client names to instances
@@ -59,8 +66,9 @@ const aiClients = {
   anthropic: anthropicClient,
   openai: openaiClient,
   google: googleClient,
-  meta: metaLlamaClient,
+  deepinfra: deepInfraClient,
   groq: groqClient,
+  together: togetherClient,
 };
 
 type MessageParam = { role: 'user' | 'assistant'; content: string };
@@ -156,8 +164,8 @@ export async function POST(req: Request) {
           modelResponse += chunkText;
           await writeChunk(chunkText);
         }
-      } else if (provider.clientName === 'meta') {
-        const completion = await metaLlamaClient.chat.completions.create({
+      } else if (provider.clientName === 'deepinfra') {
+        const completion = await deepInfraClient.chat.completions.create({
           messages: [
             ...history.map((msg: { role: string; content: string }) => ({
               role: msg.role as 'user' | 'assistant',
@@ -187,6 +195,21 @@ export async function POST(req: Request) {
           if (chunk.choices[0]?.delta?.content) {
             modelResponse += chunk.choices[0].delta.content;
             await writeChunk(chunk.choices[0].delta.content);
+          }
+        }
+      } else if (provider.clientName === 'together') {
+        const completion = await togetherClient.completions.create({
+          model: model.id,
+          prompt: history.map((msg: { role: string; content: string }) => `${msg.role}: ${msg.content}`).join('\n') + `\nuser: ${prompt}\nassistant:`,
+          max_tokens: model.maxTokens,
+          stream: true,
+        });
+
+        for await (const chunk of completion) {
+          if (chunk.choices && chunk.choices[0]?.text) {
+            const content = chunk.choices[0].text;
+            modelResponse += content;
+            await writeChunk(content);
           }
         }
       }

@@ -27,17 +27,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - Streams responses in real-time
 - Maintains conversation history for all models
 - Stores responses in Supabase for analysis and tracking
-- Supports multiple AI models (Claude 3 Sonnet, Claude 3 Haiku, OpenAI, Anthropic, Google Gemini)
-
-## Environment Variables
-
-Make sure to set up the following environment variables:
-
-- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
-- `ANTHROPIC_API_KEY`: Your Anthropic API key
-- `OPENAI_API_KEY`: Your OpenAI API key
-- `GOOGLE_API_KEY`: Your Google API key
+- Supports multiple AI models.
 
 ## Dependencies
 
@@ -50,15 +40,6 @@ This project uses several key dependencies:
 - tailwindcss for styling
 
 For a full list of dependencies, refer to the `package.json` file.
-
-## Learn More
-
-To learn more about the technologies used in this project, check out the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Anthropic API Documentation](https://docs.anthropic.com)
-- [Supabase Documentation](https://supabase.io/docs)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 
 ## Deploy on Vercel
 

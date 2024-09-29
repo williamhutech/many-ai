@@ -16,7 +16,9 @@ const Textarea = ({ value, className }: TextareaProps) => {
     // Use a div to display formatted content
     <div
       className={cn(
-      "prose prose-sm max-w-none min-h-[80px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 overflow-y-auto",
+        "prose prose-sm max-w-none min-h-[80px] w-full bg-white px-3 py-2 overflow-y-auto",
+        "rounded-sm", // Change this from rounded-md to rounded-sm
+        "border-none",
         className
       )}
     >

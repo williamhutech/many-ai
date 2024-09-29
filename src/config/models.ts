@@ -1,11 +1,13 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import TogetherClient from 'together-ai';
 
 // Define interfaces for Model and AIProvider
 export interface Model {
   id: string;
   displayName: string;
   maxTokens: number;
+  enabled: boolean; // Add this line
 }
 
 export interface AIProvider {
@@ -24,11 +26,13 @@ export const aiProviders: AIProvider[] = [
         id: 'claude-3-haiku-20240307',
         displayName: 'Claude 3 Haiku',
         maxTokens: 1000,
+        enabled: true,
       },
       {
-        id: 'claude-3-sonnet-20240229',
-        displayName: 'Claude 3 Sonnet',
+        id: 'claude-3-5-sonnet-20240620',
+        displayName: 'Claude 3.5 Sonnet',
         maxTokens: 1000,
+        enabled: true,
       },
     ],
   },
@@ -37,9 +41,16 @@ export const aiProviders: AIProvider[] = [
     clientName: 'openai',
     models: [
       {
-        id: 'gpt-4o',
-        displayName: 'GPT-4o',
+        id: 'gpt-4o-2024-08-06',
+        displayName: 'GPT 4o',
         maxTokens: 1000,
+        enabled: true,
+      },
+      {
+        id: 'gpt-4o-mini-2024-07-18',
+        displayName: 'GPT 4o Mini',
+        maxTokens: 1000,
+        enabled: true,
       },
     ],
   },
@@ -51,22 +62,37 @@ export const aiProviders: AIProvider[] = [
         id: 'gemini-1.5-pro-002',
         displayName: 'Gemini 1.5 Pro',
         maxTokens: 1000,
+        enabled: true,
       },
       {
         id: 'gemini-1.5-flash-002',
         displayName: 'Gemini 1.5 Flash',
         maxTokens: 1000,
+        enabled: true,
       },
     ],
   },
   {
-    name: 'Meta',
-    clientName: 'meta',
+    name: 'DeepInfra',
+    clientName: 'deepinfra',
     models: [
       {
-        id: 'meta-llama/Meta-Llama-3.1-70B-Instruct',
-        displayName: 'Llama 3.1 70B',
+        id: 'meta-llama/Llama-3.2-90B-Vision-Instruct',
+        displayName: 'Llama 3.2 90B - DI',
         maxTokens: 1000,
+        enabled: false,
+      },
+      {
+        id: 'meta-llama/Llama-3.2-11B-Vision-Instruct',
+        displayName: 'Llama 3.2 11B - DI',
+        maxTokens: 1000,
+        enabled: false,
+      },
+      {
+        id: 'meta-llama/Meta-Llama-3.1-70B-Instruct',
+        displayName: 'Llama 3.1 70B - DI',
+        maxTokens: 1000,
+        enabled: false,
       },
     ],
   },
@@ -76,13 +102,39 @@ export const aiProviders: AIProvider[] = [
     models: [
       {
         id: 'llama-3.1-70b-versatile',
-        displayName: 'Llama 3.1 70B FAST',
+        displayName: 'Llama 3.1 70B ULTRA',
         maxTokens: 1000,
+        enabled: false,
       },
       {
         id: 'llama-3.2-90b-text-preview',
-        displayName: 'Llama 3.2 90B FAST',
+        displayName: 'Llama 3.2 90B ULTRA',
         maxTokens: 1000,
+        enabled: false,
+      },
+      {
+        id: 'llama-3.2-11b-text-preview',
+        displayName: 'Llama 3.2 11B ULTRA',
+        maxTokens: 1000,
+        enabled: false,
+      },
+    ],
+  },
+  {
+    name: 'Together AI',
+    clientName: 'together',
+    models: [
+      {
+        id: 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo',
+        displayName: 'Llama 3.2 90B',
+        maxTokens: 1000,
+        enabled: true,
+      },
+      {
+        id: 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo',
+        displayName: 'Llama 3.2 11B',
+        maxTokens: 1000,
+        enabled: true,
       },
     ],
   },
@@ -90,7 +142,7 @@ export const aiProviders: AIProvider[] = [
 
 // Function to get all available models
 export const getAllModels = (): Model[] => {
-  return aiProviders.flatMap(provider => provider.models);
+  return aiProviders.flatMap(provider => provider.models.filter(model => model.enabled));
 };
 
 // Function to get a specific model by its ID
