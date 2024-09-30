@@ -184,7 +184,7 @@ export default function SDKPlayground() {
 
       {/* Main content area with result cards */}
       <main className="flex-1 container mx-auto p-6 overflow-hidden">
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((index) => (
             <ResultCard key={index} index={index} models={models} results={results} handleModelChange={handleModelChange} />
           ))}
@@ -209,7 +209,14 @@ export default function SDKPlayground() {
                 className="w-full placeholder-gray-500 placeholder-opacity-100 focus:placeholder-opacity-0"
               />
             </div>
-            <Button type="submit" disabled={isLoading} className="px-6 py-2 min-w-[40px]">
+            <Button
+              type="submit"
+              disabled={isLoading || input.trim() === ''}
+              className={cn(
+                "px-6 py-2 min-w-[40px]",
+                (isLoading || input.trim() === '') && "opacity-50 cursor-not-allowed bg-gray-500"
+              )}
+            >
               {isLoading ? (
                 <>
                   <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent inline-block"></span>

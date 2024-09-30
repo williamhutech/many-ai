@@ -4,8 +4,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 
 // Define metadata for SEO and browser tab information
 export const metadata: Metadata = {
-  title: "Claude 3 Comparison",
-  description: "Compare responses from Claude 3 Haiku and Sonnet models",
+  title: "AI Teamwork",
+  description: "Compare responses from models",
 };
 
 // Root layout component that wraps all pages for consistent structure
