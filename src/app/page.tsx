@@ -24,7 +24,7 @@ import { getAllModels, Model } from '@/config/models';
 export default function SDKPlayground() {
   const defaultModels = ['gemini-1.5-pro-002', 'gpt-4o-2024-08-06', 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo'];
 
-  // Initialize state variables for models, input, results, loading, session, and conversation histories
+  // Initialize state variables
   const [models, setModels] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const storedModels = localStorage.getItem('selectedModels');
@@ -33,11 +33,14 @@ export default function SDKPlayground() {
     return defaultModels;
   });
   const [input, setInput] = useState('');
-  const [results, setResults] = useState(['', '', '']);
+  const [conversations, setConversations] = useState<Array<{ prompt: string, results: string[] }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [conversationHistories, setConversationHistories] = useState<{ [modelId: string]: Array<{ role: string; content: string }> }>({});
   const [showCopiedPopup, setShowCopiedPopup] = useState(false);
+  const latestConversationRef = useRef<HTMLDivElement>(null);
+  const [isInitialState, setIsInitialState] = useState(true);
+  const [isDismissing, setIsDismissing] = useState(false);
 
   // Refresh the webpage when the title is clicked
   const handleTitleClick = () => {
@@ -82,6 +85,17 @@ export default function SDKPlayground() {
     setIsLoading(true);
     const currentInput = input;
     setInput('');
+    
+    if (isInitialState) {
+      setIsDismissing(true);
+      setTimeout(() => {
+        setIsInitialState(false);
+        setIsDismissing(false);
+      }, 250); // Match this duration with the CSS animation duration
+    }
+
+    // Add new conversation entry
+    setConversations(prev => [...prev, { prompt: currentInput, results: ['', '', ''] }]);
 
     // Function to fetch response for a single model
     const fetchModelResponse = async (index: number) => {
@@ -125,10 +139,10 @@ export default function SDKPlayground() {
                 const data = JSON.parse(line.slice(6));
                 if (data.content) {
                   modelResponse += data.content;
-                  setResults(prevResults => {
-                    const newResults = [...prevResults];
-                    newResults[index] = modelResponse;
-                    return newResults;
+                  setConversations(prev => {
+                    const newConversations = [...prev];
+                    newConversations[newConversations.length - 1].results[index] = modelResponse;
+                    return newConversations;
                   });
                 } else if (data.error) {
                   throw new Error(data.error);
@@ -154,22 +168,29 @@ export default function SDKPlayground() {
         });
       } catch (error) {
         console.error(`Error fetching response for ${modelId}:`, error);
-        setResults(prevResults => {
-          const newResults = [...prevResults];
-          newResults[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
-          return newResults;
+        setConversations(prev => {
+          const newConversations = [...prev];
+          newConversations[newConversations.length - 1].results[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
+          return newConversations;
         });
       }
     };
 
     // Fetch responses from all models simultaneously
     await Promise.all(models.map((_, index) => fetchModelResponse(index)));
+
     setIsLoading(false);
   };
 
+  useEffect(() => {
+    if (latestConversationRef.current) {
+      latestConversationRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [conversations]);
+
   // Render the user interface with header, main content, and footer
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-screen">
       {/* Header */}
       <header className="bg-white border-b border-gray-100 px-10 py-3">
         <h1 className="text-lg font-semibold font-inter">
@@ -182,12 +203,49 @@ export default function SDKPlayground() {
         </h1>
       </header>
 
-      {/* Main content area with result cards */}
-      <main className="flex-1 container mx-auto p-6 overflow-hidden">
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {[0, 1, 2].map((index) => (
-            <ResultCard key={index} index={index} models={models} results={results} handleModelChange={handleModelChange} />
-          ))}
+      {/* Main content area with conversation history and result cards */}
+      <main className={cn(
+        "flex-1 w-full overflow-y-auto",
+        isInitialState ? "flex items-center justify-center" : ""
+      )}>
+        <div className="container mx-auto p-6">
+          {(isInitialState || isDismissing) ? (
+            <div className={cn(
+              "transition-opacity duration-500",
+              isDismissing ? "opacity-0" : "opacity-100"
+            )}>
+              <InitialModelSelection models={models} handleModelChange={handleModelChange} />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {conversations.map((conversation, index) => (
+                <div 
+                  key={index} 
+                  className="space-y-4"
+                  ref={index === conversations.length - 1 ? latestConversationRef : null}
+                >
+                  {/* User's prompt speech bubble */}
+                  <div className="flex justify-end mb-4">
+                    <div className="max-w-3/4 p-3 rounded bg-gray-100">
+                      <p className="text-sm text-gray-800">{conversation.prompt}</p>
+                    </div>
+                  </div>
+                  {/* AI response cards */}
+                  <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                    {[0, 1, 2].map((modelIndex) => (
+                      <ResultCard 
+                        key={modelIndex} 
+                        index={modelIndex} 
+                        models={models} 
+                        results={conversation.results} 
+                        handleModelChange={handleModelChange} 
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
@@ -205,7 +263,7 @@ export default function SDKPlayground() {
                   e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
                 }}
                 onSubmit={handleSubmit}
-                placeholder={results.some(result => result !== '') ? input : 'Enter your message...'}
+                placeholder="Enter your message..."
                 className="w-full placeholder-gray-500 placeholder-opacity-100 focus:placeholder-opacity-0"
               />
             </div>
@@ -262,7 +320,7 @@ const ResultCard = ({ index, models, results, handleModelChange }: {
         "transition-all duration-200"
       )}
     >
-      <CardHeader className="flex items-center justify-between p-4">
+      <CardHeader className="flex items-center justify-between p-2">
         <Select
           value={models[index]}
           onValueChange={(value) => handleModelChange(index, value)}
@@ -287,5 +345,45 @@ const ResultCard = ({ index, models, results, handleModelChange }: {
         />
       </CardContent>
     </Card>
+  );
+};
+
+const InitialModelSelection = ({ models, handleModelChange }: {
+  models: string[];
+  handleModelChange: (index: number, value: string) => void;
+}) => {
+  const [modelOptions, setModelOptions] = useState<Model[]>([]);
+
+  useEffect(() => {
+    setModelOptions(getAllModels());
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto space-y-6">
+      <h2 className="text-xl font-semibold text-center">
+        Start by Selecting the Models You&apos;d like to Use:
+      </h2>
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full">
+        {[0, 1, 2].map((index) => (
+          <Card key={index} className="p-4">
+            <Select
+              value={models[index]}
+              onValueChange={(value) => handleModelChange(index, value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {modelOptions.map(model => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.displayName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 };
