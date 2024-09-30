@@ -1,6 +1,6 @@
-# Claude 3 Comparison
+# VerZero
 
-This is a Next.js project that compares responses from two different Claude 3 models: Haiku and Sonnet.
+This is a Next.js project that compares responses from multiple AI models.
 
 ## Getting Started
 
