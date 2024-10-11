@@ -24,13 +24,13 @@ export const aiProviders: AIProvider[] = [
     models: [
       {
         id: 'claude-3-haiku-20240307',
-        displayName: 'Claude 3 Haiku',
+        displayName: 'Claude Haiku [FAST]',
         maxTokens: 1000,
         enabled: true,
       },
       {
         id: 'claude-3-5-sonnet-20240620',
-        displayName: 'Claude 3.5 Sonnet',
+        displayName: 'Claude Sonnet [Smart]',
         maxTokens: 1000,
         enabled: true,
       },
@@ -42,13 +42,13 @@ export const aiProviders: AIProvider[] = [
     models: [
       {
         id: 'gpt-4o-2024-08-06',
-        displayName: 'GPT 4o',
+        displayName: 'ChatGPT 4o [Smart]',
         maxTokens: 1000,
         enabled: true,
       },
       {
         id: 'gpt-4o-mini-2024-07-18',
-        displayName: 'GPT 4o Mini',
+        displayName: 'ChatGPT 4o [FAST]',
         maxTokens: 1000,
         enabled: true,
       },
@@ -60,13 +60,13 @@ export const aiProviders: AIProvider[] = [
     models: [
       {
         id: 'gemini-1.5-pro-002',
-        displayName: 'Gemini 1.5 Pro',
+        displayName: 'Gemini 1.5 [Smart]',
         maxTokens: 1000,
         enabled: true,
       },
       {
         id: 'gemini-1.5-flash-002',
-        displayName: 'Gemini 1.5 Flash',
+        displayName: 'Gemini 1.5 [FAST]',
         maxTokens: 1000,
         enabled: true,
       },
@@ -78,13 +78,13 @@ export const aiProviders: AIProvider[] = [
     models: [
       {
         id: 'meta-llama/Llama-3.2-90B-Vision-Instruct',
-        displayName: 'Llama 3.2 90B - DI',
+        displayName: 'Llama 3.2 [Smart]',
         maxTokens: 1000,
         enabled: false,
       },
       {
         id: 'meta-llama/Llama-3.2-11B-Vision-Instruct',
-        displayName: 'Llama 3.2 11B - DI',
+        displayName: 'Llama 3.2 [FAST]',
         maxTokens: 1000,
         enabled: false,
       },
@@ -101,20 +101,14 @@ export const aiProviders: AIProvider[] = [
     clientName: 'groq',
     models: [
       {
-        id: 'llama-3.1-70b-versatile',
-        displayName: 'Llama 3.1 70B ULTRA',
-        maxTokens: 1000,
-        enabled: false,
-      },
-      {
         id: 'llama-3.2-90b-text-preview',
-        displayName: 'Llama 3.2 90B ULTRA',
+        displayName: 'Llama 3.2 [ULTRA Smart]',
         maxTokens: 1000,
         enabled: true,
       },
       {
         id: 'llama-3.2-11b-text-preview',
-        displayName: 'Llama 3.2 11B ULTRA',
+        displayName: 'Llama 3.2 [ULTRA FAST]',
         maxTokens: 1000,
         enabled: true,
       },
@@ -126,13 +120,13 @@ export const aiProviders: AIProvider[] = [
     models: [
       {
         id: 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo',
-        displayName: 'Llama 3.2 90B',
+        displayName: 'Llama 3.2 [Smart]',
         maxTokens: 1000,
         enabled: true,
       },
       {
         id: 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo',
-        displayName: 'Llama 3.2 11B',
+        displayName: 'Llama 3.2 [FAST]',
         maxTokens: 1000,
         enabled: true,
       },
