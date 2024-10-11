@@ -12,7 +12,7 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
+        textarea.style.height = props.value ? `${textarea.scrollHeight}px` : 'auto';
       }
     }, [props.value]);
 
@@ -52,6 +52,7 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
     )
   }
 )
+
 Input.displayName = "Input"
 
 export { Input }

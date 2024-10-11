@@ -13,6 +13,7 @@ export interface Model {
 export interface AIProvider {
   name: string;
   clientName: string; // Name to identify the client
+  nickname: string; // Add this line
   models: Model[];
 }
 
@@ -21,16 +22,17 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'Anthropic',
     clientName: 'anthropic',
+    nickname: 'Claude', // Add this line
     models: [
       {
         id: 'claude-3-haiku-20240307',
-        displayName: 'Claude Haiku [FAST]',
+        displayName: 'Claude Haiku 3 [FAST]',
         maxTokens: 1000,
         enabled: true,
       },
       {
         id: 'claude-3-5-sonnet-20240620',
-        displayName: 'Claude Sonnet [Smart]',
+        displayName: 'Claude Sonnet 3.5 [Smart]',
         maxTokens: 1000,
         enabled: true,
       },
@@ -39,6 +41,7 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'OpenAI',
     clientName: 'openai',
+    nickname: 'ChatGPT', // Add this line
     models: [
       {
         id: 'gpt-4o-2024-08-06',
@@ -57,6 +60,7 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'Google',
     clientName: 'google',
+    nickname: 'Gemini', // Add this line
     models: [
       {
         id: 'gemini-1.5-pro-002',
@@ -75,6 +79,7 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'DeepInfra',
     clientName: 'deepinfra',
+    nickname: 'Llama', // Add this line
     models: [
       {
         id: 'meta-llama/Llama-3.2-90B-Vision-Instruct',
@@ -99,6 +104,7 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'Groq',
     clientName: 'groq',
+    nickname: 'Llama', // Add this line
     models: [
       {
         id: 'llama-3.2-90b-text-preview',
@@ -117,6 +123,7 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'Together AI',
     clientName: 'together',
+    nickname: 'Llama', // Add this line
     models: [
       {
         id: 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo',

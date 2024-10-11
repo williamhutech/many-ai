@@ -19,7 +19,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { getAllModels, Model } from '@/config/models';
+import { getAllModels, Model, getProviderForModel } from '@/config/models';
 
 export default function SDKPlayground() {
   const defaultModels = ['gemini-1.5-pro-002', 'gpt-4o-2024-08-06', 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo'];
@@ -42,6 +42,7 @@ export default function SDKPlayground() {
   const [isInitialState, setIsInitialState] = useState(true);
   const [isDismissing, setIsDismissing] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [streamingModels, setStreamingModels] = useState<string[]>([]);
 
   // Refresh the webpage when the title is clicked
   const handleTitleClick = () => {
@@ -87,6 +88,11 @@ export default function SDKPlayground() {
     const currentInput = input;
     setInput('');
     
+    // Reset input box height
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+    
     if (isInitialState) {
       setIsDismissing(true);
       setTimeout(() => {
@@ -101,6 +107,11 @@ export default function SDKPlayground() {
     // Function to fetch response for a single model
     const fetchModelResponse = async (index: number) => {
       const modelId = models[index];
+      const provider = getProviderForModel(modelId);
+      if (!provider) return;
+
+      setStreamingModels(prev => [...prev, provider.nickname]);
+
       try {
         console.log(`Sending request for model: ${modelId}`);
         const response = await fetch('/api/generate', {
@@ -174,6 +185,8 @@ export default function SDKPlayground() {
           newConversations[newConversations.length - 1].results[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
           return newConversations;
         });
+      } finally {
+        setStreamingModels(prev => prev.filter(m => m !== provider.nickname));
       }
     };
 
@@ -212,7 +225,7 @@ export default function SDKPlayground() {
 
       {/* Main content area with conversation history and result cards */}
       <main className={cn(
-        "flex-1 w-full overflow-y-auto",
+        "flex-1 w-full overflow-y-auto pb-32",
         isInitialState ? "flex items-center justify-center" : ""
       )}>
         <div className="container mx-auto p-6">
@@ -257,7 +270,8 @@ export default function SDKPlayground() {
       </main>
 
       {/* Footer with input form */}
-      <footer className="bg-gray-50 border-t border-border px-10 py-4">
+      <footer className="fixed bottom-0 left-0 right-0 bg-gray-50 border-t border-border px-10 py-4">
+        <StreamingStatus streamingModels={streamingModels} />
         <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4">
           <div className="w-full flex items-end space-x-4">
             <div className="flex-1">
@@ -324,7 +338,7 @@ const ResultCard = ({ index, models, results, handleModelChange }: {
   return (
     <Card 
       className={cn(
-        "flex flex-col h-full max-h-[calc(100vh-250px)]",
+        "flex flex-col h-full max-h-[calc(100vh-300px)]",
         "transition-all duration-200"
       )}
     >
@@ -345,7 +359,7 @@ const ResultCard = ({ index, models, results, handleModelChange }: {
           </SelectContent>
         </Select>
       </CardHeader>
-      <CardContent className="p-4 pt-0 flex-1 max-h-[calc(100vh-300px)] overflow-y-auto">
+      <CardContent className="p-4 pt-0 flex-1 overflow-y-auto">
         <Textarea
           value={results[index]}
           className="h-full w-full text-xs-custom"
@@ -392,6 +406,20 @@ const InitialModelSelection = ({ models, handleModelChange }: {
           </Card>
         ))}
       </div>
+    </div>
+  );
+};
+
+const StreamingStatus = ({ streamingModels }: { streamingModels: string[] }) => {
+  if (streamingModels.length === 0) return null;
+
+  const statusText = streamingModels.length === 1
+    ? `${streamingModels[0]} is thinking...`
+    : `${streamingModels.slice(0, -1).join(', ')} and ${streamingModels[streamingModels.length - 1]} are thinking...`;
+
+  return (
+    <div className="text-xs text-gray-500 mb-4">
+      {statusText}
     </div>
   );
 };
