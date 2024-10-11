@@ -41,6 +41,7 @@ export default function SDKPlayground() {
   const latestConversationRef = useRef<HTMLDivElement>(null);
   const [isInitialState, setIsInitialState] = useState(true);
   const [isDismissing, setIsDismissing] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Refresh the webpage when the title is clicked
   const handleTitleClick = () => {
@@ -188,6 +189,12 @@ export default function SDKPlayground() {
     }
   }, [conversations]);
 
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isInitialState]);
+
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col h-screen">
@@ -256,6 +263,7 @@ export default function SDKPlayground() {
             <div className="flex-1">
               <Input
                 id="message-input"
+                ref={inputRef}
                 value={input}
                 onChange={(e) => {
                   setInput(e.target.value);

@@ -33,7 +33,18 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
           "min-h-[40px] max-h-[120px] resize-none overflow-hidden",
           className
         )}
-        ref={textareaRef}
+        ref={(node) => {
+          if (typeof ref === 'function') {
+            ref(node);
+          } else if (ref) {
+            if (ref && typeof ref !== 'function') {
+              (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+            }
+          }
+          if (textareaRef.current) {
+            (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+          }
+        }}
         rows={1}
         onKeyDown={handleKeyDown}
         {...props}
