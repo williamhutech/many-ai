@@ -10,6 +10,8 @@
     "vercel-build": "next build"
   },
   "dependencies": {
+    "@amplitude/analytics-browser": "^2.11.7",
+    "@amplitude/plugin-session-replay-browser": "^1.6.21",
     "@anthropic-ai/sdk": "^0.27.3",
     "@google/generative-ai": "^0.1.3",
     "@radix-ui/react-label": "^2.1.0",

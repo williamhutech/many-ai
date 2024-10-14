@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import * as amplitude from '@amplitude/analytics-browser';
+import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +45,21 @@ export default function SDKPlayground() {
   const [isDismissing, setIsDismissing] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [streamingModels, setStreamingModels] = useState<string[]>([]);
+
+  // Initialize Amplitude when the component mounts
+  useEffect(() => {
+    const sessionReplayTracking = sessionReplayPlugin();
+    amplitude.add(sessionReplayTracking);
+
+    amplitude.init('1c41ff2fec59f888fb92fd241eeafe66', undefined, {
+      defaultTracking: {
+        sessions: true,
+        pageViews: true,
+        formInteractions: true,
+        fileDownloads: true,
+      },
+    });
+  }, []);
 
   // Refresh the webpage when the title is clicked
   const handleTitleClick = () => {
@@ -100,6 +117,12 @@ export default function SDKPlayground() {
         setIsDismissing(false);
       }, 250); // Match this duration with the CSS animation duration
     }
+
+    // Track prompt submission event
+    amplitude.track('Prompt Submitted', {
+      promptLength: currentInput.length,
+      selectedModels: models,
+    });
 
     // Add new conversation entry
     setConversations(prev => [...prev, { prompt: currentInput, results: ['', '', ''] }]);
