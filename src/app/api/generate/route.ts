@@ -1,28 +1,22 @@
+import 'dotenv/config'
 import { NextResponse } from 'next/server';
 import { aiProviders, getProviderForModel, getModelById } from '@/config/models';
-import { createClient } from '@supabase/supabase-js';
-import { randomUUID } from 'crypto';
+import { createServerClient } from '@/lib/supabase/server'; // Updated import
 import OpenAI from 'openai';
 import { Anthropic } from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import axios from 'axios'; // Add this import for Meta-Llama
+import axios from 'axios';
 import { Groq } from 'groq-sdk';
-import TogetherClient from 'together-ai'; // Fixed import statement
+import TogetherClient from 'together-ai';
+import { randomUUID } from 'crypto';
 
-// Initialize Supabase client for logging responses
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// Initialize Supabase client
+const supabase = createServerClient();
+if (supabase) {
+  console.log('Supabase client initialized successfully');
+} else {
+  console.error('Failed to initialize Supabase client');
 }
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-});
 
 // Initialize AI clients at the top level
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
@@ -72,6 +66,20 @@ const aiClients = {
 };
 
 type MessageParam = { role: 'user' | 'assistant'; content: string };
+
+type CompletionParams = {
+  messages: MessageParam[];
+  model: string;
+  stream: boolean;
+};
+
+type CompletionResponse = {
+  choices: Array<{
+    delta: {
+      content?: string;
+    };
+  }>;
+};
 
 export async function POST(req: Request) {
   const { prompt, sessionId, conversationHistories, selectedModel } = await req.json();
@@ -165,23 +173,29 @@ export async function POST(req: Request) {
           await writeChunk(chunkText);
         }
       } else if (provider.clientName === 'deepinfra') {
-        const completion = await deepInfraClient.chat.completions.create({
-          messages: [
-            ...history.map((msg: { role: string; content: string }) => ({
-              role: msg.role as 'user' | 'assistant',
-              content: msg.content
-            })),
-            { role: 'user', content: prompt }
-          ],
+        modelStream = await (client as OpenAI).chat.completions.create({
           model: model.id,
+          messages: history,
           stream: true,
         });
 
-        for await (const chunk of completion) {
-          if (chunk.choices[0].delta.content) {
-            const content = chunk.choices[0].delta.content;
-            modelResponse += content;
-            await writeChunk(content);
+        for await (const chunk of modelStream) {
+          if ('choices' in chunk && chunk.choices[0]?.delta?.content) {
+            modelResponse += chunk.choices[0].delta.content;
+            await writeChunk(chunk.choices[0].delta.content);
+          }
+        }
+      } else if (provider.clientName === 'together') {
+        modelStream = await (client as TogetherClient).chat.completions.create({
+          model: model.id,
+          messages: history,
+          stream: true,
+        });
+
+        for await (const chunk of modelStream) {
+          if ('choices' in chunk && chunk.choices[0]?.delta?.content) {
+            modelResponse += chunk.choices[0].delta.content;
+            await writeChunk(chunk.choices[0].delta.content);
           }
         }
       } else if (provider.clientName === 'groq') {
@@ -197,45 +211,34 @@ export async function POST(req: Request) {
             await writeChunk(chunk.choices[0].delta.content);
           }
         }
-      } else if (provider.clientName === 'together') {
-        const completion = await togetherClient.completions.create({
-          model: model.id,
-          prompt: history.map((msg: { role: string; content: string }) => `${msg.role}: ${msg.content}`).join('\n') + `\nuser: ${prompt}\nassistant:`,
-          max_tokens: model.maxTokens,
-          stream: true,
-        });
-
-        for await (const chunk of completion) {
-          if (chunk.choices && chunk.choices[0]?.text) {
-            const content = chunk.choices[0].text;
-            modelResponse += content;
-            await writeChunk(content);
-          }
-        }
       }
 
-      // Log the full JSON response for all models
-      const fullResponse = {
-        model: model.id,
-        prompt: prompt,
-        response: modelResponse,
-      };
-      console.log(`Full JSON response for ${model.id}:`, JSON.stringify(fullResponse, null, 2));
+      // Save the response to Supabase
+      if (supabase) {
+        try {
+          const { error } = await supabase.from('verone_log').insert({
+            id: randomUUID(),
+            session_id: sessionId,
+            conversation_id: randomUUID(),
+            prompt,
+            model_name: model.id,
+            model_response: modelResponse.replace(/\n/g, '\n\n').trim(),
+            created_at: new Date().toISOString(),
+          });
 
-      // Log response in Supabase
-      try {
-        await supabase.from('verzero_log').insert({
-          id: crypto.randomUUID(),
-          session_id: sessionId,
-          conversation_id: crypto.randomUUID(),
-          prompt,
-          model_name: model.id,
-          model_response: modelResponse.replace(/\n/g, '\n\n').trim(),
-          created_at: new Date().toISOString(),
-        });
-        console.log(`Response saved to Supabase for model: ${model.id}`);
-      } catch (error) {
-        console.error(`Error saving response to Supabase for model ${model.id}:`, error);
+          if (error) {
+            console.error('Error inserting data into Supabase:', error);
+          } else {
+            console.log(`Response saved to Supabase for model: ${model.id}`);
+          }
+        } catch (error) {
+          console.error(`Error saving response to Supabase for model ${model.id}:`, error);
+          if (error instanceof Error) {
+            console.error('Error details:', error.message);
+          }
+        }
+      } else {
+        console.error('Supabase client is not initialized');
       }
 
       await writer.close();

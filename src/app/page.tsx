@@ -3,25 +3,26 @@
 import { useState, useEffect, useRef } from 'react';
 import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { getAllModels, Model, getProviderForModel } from '@/config/models';
+import { getProviderForModel } from '@/config/models';
+import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
+import Image from 'next/image';
+
+const Header = () => (
+  <header className="bg-white border-b border-gray-100 px-10 py-3 flex justify-between items-center">
+    <h1 className="text-lg font-semibold font-inter">
+      <span className="cursor-pointer flex items-center" onClick={() => window.location.reload()}>
+        <Image src="/logo.svg" alt="ManyAI Logo" width={32} height={32} className="mr-4" />
+        {/* <Image src="/manyai_logo.svg" alt="ManyAI Logo" width={80} height={20} className="mr-2" /> */}
+      </span>
+    </h1>
+    <div className="space-x-3">
+      <Button variant="outline" size="xs" className="text-xs">Log in</Button>
+      <Button size="xs" className="text-xs">Upgrade to PRO</Button>
+    </div>
+  </header>
+);
 
 export default function SDKPlayground() {
   const defaultModels = ['gemini-1.5-pro-002', 'gpt-4o-2024-08-06', 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo'];
@@ -35,7 +36,7 @@ export default function SDKPlayground() {
     return defaultModels;
   });
   const [input, setInput] = useState('');
-  const [conversations, setConversations] = useState<Array<{ prompt: string, results: string[] }>>([]);
+  const [conversations, setConversations] = useState<Array<{ prompt: string; results: string[] }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [conversationHistories, setConversationHistories] = useState<{ [modelId: string]: Array<{ role: string; content: string }> }>({});
@@ -45,13 +46,14 @@ export default function SDKPlayground() {
   const [isDismissing, setIsDismissing] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [streamingModels, setStreamingModels] = useState<string[]>([]);
+  const [isInitialFooter, setIsInitialFooter] = useState(true);
 
   // Initialize Amplitude when the component mounts
   useEffect(() => {
     const sessionReplayTracking = sessionReplayPlugin();
     amplitude.add(sessionReplayTracking);
 
-    amplitude.init('1c41ff2fec59f888fb92fd241eeafe66', undefined, {
+    amplitude.init(process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY || '', undefined, {
       defaultTracking: {
         sessions: true,
         pageViews: true,
@@ -82,34 +84,40 @@ export default function SDKPlayground() {
   }, [models]);
 
   // Update the selected model for a specific index
-  const handleModelChange = (index: number, value: string) => {
-    const newModels = [...models];
-    const existingIndex = newModels.findIndex(model => model === value);
+  const handleModelChange = (index: number, newModel: string) => {
+    setModels(prevModels => {
+      const newModels = [...prevModels];
+      const oldModel = newModels[index];
+      const existingIndex = newModels.indexOf(newModel);
 
-    if (existingIndex !== -1 && existingIndex !== index) {
-      // Swap the models
-      [newModels[index], newModels[existingIndex]] = [newModels[existingIndex], newModels[index]];
-    } else {
-      newModels[index] = value;
-    }
+      if (existingIndex !== -1) {
+        // Swap the models
+        newModels[existingIndex] = oldModel;
+      }
 
-    setModels(newModels);
-    localStorage.setItem('selectedModels', JSON.stringify(newModels));
+      newModels[index] = newModel;
+
+      // Update localStorage
+      localStorage.setItem('selectedModels', JSON.stringify(newModels));
+
+      return newModels;
+    });
   };
 
   // Handle form submission and fetch responses from selected models
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsInitialFooter(false);
     if (!sessionId) return;
     setIsLoading(true);
     const currentInput = input;
     setInput('');
-    
+
     // Reset input box height
     if (inputRef.current) {
       inputRef.current.style.height = 'auto';
     }
-    
+
     if (isInitialState) {
       setIsDismissing(true);
       setTimeout(() => {
@@ -137,6 +145,7 @@ export default function SDKPlayground() {
 
       try {
         console.log(`Sending request for model: ${modelId}`);
+        
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -160,18 +169,20 @@ export default function SDKPlayground() {
         const decoder = new TextDecoder();
 
         let modelResponse = '';
+        let fullResponse = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
+          fullResponse += chunk;
 
+          const lines = chunk.split('\n');
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
-                const data = JSON.parse(line.slice(6));
+                const data = JSON.parse(line.slice(5));
                 if (data.content) {
                   modelResponse += data.content;
                   setConversations(prev => {
@@ -188,6 +199,8 @@ export default function SDKPlayground() {
             }
           }
         }
+
+        console.log(`Full API response for ${modelId}:`, fullResponse);
 
         // Update conversation histories
         setConversationHistories(prev => {
@@ -234,18 +247,7 @@ export default function SDKPlayground() {
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col h-screen">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-10 py-3">
-        <h1 className="text-lg font-semibold font-inter">
-          <span 
-            className="cursor-pointer" 
-            onClick={handleTitleClick}
-          >
-            AI Teamwork
-          </span>
-        </h1>
-      </header>
-
+      <Header />
       {/* Main content area with conversation history and result cards */}
       <main className={cn(
         "flex-1 w-full overflow-y-auto pb-32",
@@ -275,7 +277,7 @@ export default function SDKPlayground() {
                   </div>
                   {/* AI response cards */}
                   <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {[0, 1, 2].map((modelIndex) => (
+                    {models.map((_, modelIndex) => (
                       <ResultCard 
                         key={modelIndex} 
                         index={modelIndex} 
@@ -331,7 +333,9 @@ export default function SDKPlayground() {
             </Button>
           </div>
           <p className="text-xs text-gray-500 text-center">
-            AI can make mistakes. Check important info.
+            {isInitialFooter
+              ? "By prompting, you agree to our Terms and have read our Privacy Policy."
+              : "AI make mistakes. That's why we're here for multi-model experiences."}
           </p>
         </form>
       </footer>
@@ -344,105 +348,3 @@ export default function SDKPlayground() {
     </div>
   );
 }
-
-// Render a card component for displaying model results
-const ResultCard = ({ index, models, results, handleModelChange }: {
-  index: number;
-  models: string[];
-  results: string[];
-  handleModelChange: (index: number, value: string) => void;
-}) => {
-  const [modelOptions, setModelOptions] = useState<Model[]>([]);
-
-  useEffect(() => {
-    setModelOptions(getAllModels());
-  }, []);
-
-  return (
-    <Card 
-      className={cn(
-        "flex flex-col h-full max-h-[calc(100vh-300px)]",
-        "transition-all duration-200"
-      )}
-    >
-      <CardHeader className="flex items-center justify-between p-2">
-        <Select
-          value={models[index]}
-          onValueChange={(value) => handleModelChange(index, value)}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {modelOptions.map(model => (
-              <SelectItem key={model.id} value={model.id} className="px-2">
-                {model.displayName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </CardHeader>
-      <CardContent className="p-4 pt-0 flex-1 overflow-y-auto">
-        <Textarea
-          value={results[index]}
-          className="h-full w-full text-xs-custom"
-          aria-placeholder="Response will appear here..."
-        />
-      </CardContent>
-    </Card>
-  );
-};
-
-const InitialModelSelection = ({ models, handleModelChange }: {
-  models: string[];
-  handleModelChange: (index: number, value: string) => void;
-}) => {
-  const [modelOptions, setModelOptions] = useState<Model[]>([]);
-
-  useEffect(() => {
-    setModelOptions(getAllModels());
-  }, []);
-
-  return (
-    <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto space-y-6">
-      <h2 className="text-xl font-semibold text-center">
-        Start by Selecting the Models You&apos;d like to Use:
-      </h2>
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full">
-        {[0, 1, 2].map((index) => (
-          <Card key={index} className="p-4">
-            <Select
-              value={models[index]}
-              onValueChange={(value) => handleModelChange(index, value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {modelOptions.map(model => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const StreamingStatus = ({ streamingModels }: { streamingModels: string[] }) => {
-  if (streamingModels.length === 0) return null;
-
-  const statusText = streamingModels.length === 1
-    ? `${streamingModels[0]} is thinking...`
-    : `${streamingModels.slice(0, -1).join(', ')} and ${streamingModels[streamingModels.length - 1]} are thinking...`;
-
-  return (
-    <div className="text-xs text-gray-500 mb-4">
-      {statusText}
-    </div>
-  );
-};

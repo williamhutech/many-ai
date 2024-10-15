@@ -4,8 +4,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 
 // Define metadata for SEO and browser tab information
 export const metadata: Metadata = {
-  title: "AI Teamwork",
-  description: "Compare responses from models",
+  title: "Many AI",
+  description: "Where Intelligence Meets Intelligence",
 };
 
 // Root layout component that wraps all pages for consistent structure
