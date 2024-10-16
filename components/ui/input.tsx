@@ -12,7 +12,8 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = 'auto';
-        textarea.style.height = props.value ? `${textarea.scrollHeight}px` : 'auto';
+        const newHeight = Math.min(textarea.scrollHeight, 5 * 24); // Assuming 24px line height
+        textarea.style.height = `${newHeight}px`;
       }
     }, [props.value]);
 
@@ -30,7 +31,7 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
       <textarea
         className={cn(
           "flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
-          "min-h-[40px] max-h-[120px] resize-none overflow-hidden",
+          "min-h-[40px] max-h-[120px] resize-none overflow-y-auto",
           className
         )}
         ref={(node) => {

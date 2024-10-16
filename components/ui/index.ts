@@ -4,4 +4,5 @@ export { Input } from './input';
 export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './select';
 export { Textarea } from './textarea';
 export { Label } from './label';
+export { TruncatedText } from './truncatedtext';
 // ...add other UI components
