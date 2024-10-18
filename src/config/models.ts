@@ -113,7 +113,7 @@ export const aiProviders: AIProvider[] = [
         enabled: true,
       },
       {
-        id: 'llama-3.2-11b-text-preview',
+        id: 'llama-3.2-11b-vision-preview',
         displayName: 'Llama 3.2 [ULTRA FAST]',
         maxTokens: 1000,
         enabled: true,

@@ -6,7 +6,7 @@ import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
 import { Button, Input, TruncatedText } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getProviderForModel } from '@/config/models';
-import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
+import { InitialModelSelection, StreamingStatus, ResultCard, FusionResult } from '@/components/pages';
 import Image from 'next/image';
 
 const Header = () => (
@@ -59,6 +59,30 @@ export default function SDKPlayground() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [streamingModels, setStreamingModels] = useState<string[]>([]);
   const [isInitialFooter, setIsInitialFooter] = useState(true);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isConsolidateEnabled, setIsConsolidateEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('isConsolidateEnabled') === 'true';
+    }
+    return true;
+  });
+  const [isCompareEnabled, setIsCompareEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('isCompareEnabled') === 'true';
+    }
+    return false;
+  });
+  const [isHighlightEnabled, setIsHighlightEnabled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('isHighlightEnabled') === 'true';
+    }
+    return false;
+  });
+  const [isSuggestMoreEnabled, setIsSuggestMoreEnabled] = useState(false);
+  const [activeButton, setActiveButton] = useState<string | null>(null);
+  const [fusionResult, setFusionResult] = useState<string>('');
+  const [isFusionLoading, setIsFusionLoading] = useState(false);
+  const fusionResultRef = useRef<HTMLDivElement>(null);
 
   // Initialize Amplitude when the component mounts
   useEffect(() => {
@@ -135,7 +159,7 @@ export default function SDKPlayground() {
       setTimeout(() => {
         setIsInitialState(false);
         setIsDismissing(false);
-      }, 250); // Match this duration with the CSS animation duration
+      }, 250);
     }
 
     // Track prompt submission event
@@ -145,7 +169,11 @@ export default function SDKPlayground() {
     });
 
     // Add new conversation entry
-    setConversations(prev => [...prev, { prompt: currentInput, results: ['', '', ''] }]);
+    setConversations(prev => {
+      const newConversations = [...prev, { prompt: currentInput, results: ['', '', ''] }];
+      console.log('New conversation added:', newConversations);
+      return newConversations;
+    });
 
     // Function to fetch response for a single model
     const fetchModelResponse = async (index: number) => {
@@ -200,6 +228,7 @@ export default function SDKPlayground() {
                   setConversations(prev => {
                     const newConversations = [...prev];
                     newConversations[newConversations.length - 1].results[index] = modelResponse;
+                    console.log(`Updated conversation for ${modelId}:`, newConversations);
                     return newConversations;
                   });
                 } else if (data.error) {
@@ -217,29 +246,62 @@ export default function SDKPlayground() {
         // Update conversation histories
         setConversationHistories(prev => {
           const history = prev[modelId] || [];
+          const newHistory = [
+            ...history,
+            { role: 'user', content: currentInput },
+            { role: 'assistant', content: modelResponse },
+          ];
+          console.log(`Updated conversation history for ${modelId}:`, newHistory);
           return {
             ...prev,
-            [modelId]: [
-              ...history,
-              { role: 'user', content: currentInput },
-              { role: 'assistant', content: modelResponse },
-            ],
+            [modelId]: newHistory,
           };
         });
+
+        return modelResponse;
       } catch (error) {
         console.error(`Error fetching response for ${modelId}:`, error);
         setConversations(prev => {
           const newConversations = [...prev];
           newConversations[newConversations.length - 1].results[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
+          console.log(`Error updating conversation for ${modelId}:`, newConversations);
           return newConversations;
         });
+        return '';
       } finally {
         setStreamingModels(prev => prev.filter(m => m !== provider.nickname));
       }
     };
 
     // Fetch responses from all models simultaneously
-    await Promise.all(models.map((_, index) => fetchModelResponse(index)));
+    const responses = await Promise.all(models.map((_, index) => fetchModelResponse(index)));
+
+    // Update conversations with all responses
+    setConversations(prev => {
+      const newConversations = [...prev];
+      newConversations[newConversations.length - 1].results = responses.filter((response): response is string => response !== undefined);
+      console.log('Final updated conversations:', newConversations);
+      return newConversations;
+    });
+
+    // Update conversation histories
+    const updatedConversationHistories = { ...conversationHistories };
+    models.forEach((modelId, index) => {
+      const history = updatedConversationHistories[modelId] || [];
+      updatedConversationHistories[modelId] = [
+        ...history,
+        { role: 'user', content: currentInput },
+        { role: 'assistant', content: responses[index] || '' },
+      ];
+    });
+    setConversationHistories(updatedConversationHistories);
+    console.log('Final updated conversation histories:', updatedConversationHistories);
+
+    // Check if a fusion button is active and trigger fusion
+    if (activeButton) {
+      console.log('Triggering fusion with active button:', activeButton);
+      await handleFusion(activeButton, true, updatedConversationHistories);
+    }
 
     setIsLoading(false);
   };
@@ -256,13 +318,149 @@ export default function SDKPlayground() {
     }
   }, [isInitialState]);
 
+  useEffect(() => {
+    if (fusionResultRef.current) {
+      fusionResultRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [fusionResult]);
+
+  // Update isStreaming state when streamingModels changes
+  useEffect(() => {
+    setIsStreaming(streamingModels.length > 0);
+  }, [streamingModels]);
+
+  const handleButtonClick = (buttonName: string) => {
+    if (activeButton === buttonName) {
+      setActiveButton(null);
+      setFusionResult('');
+      localStorage.removeItem(`is${buttonName}Enabled`);
+      switch (buttonName) {
+        case 'Consolidate':
+          setIsConsolidateEnabled(false);
+          break;
+        case 'Compare':
+          setIsCompareEnabled(false);
+          break;
+        case 'Highlight':
+          setIsHighlightEnabled(false);
+          break;
+      }
+    } else {
+      setActiveButton(buttonName);
+      localStorage.setItem(`is${buttonName}Enabled`, 'true');
+      switch (buttonName) {
+        case 'Consolidate':
+          setIsConsolidateEnabled(true);
+          break;
+        case 'Compare':
+          setIsCompareEnabled(true);
+          break;
+        case 'Highlight':
+          setIsHighlightEnabled(true);
+          break;
+      }
+      if (conversations.length > 0) {
+        handleFusion(buttonName, false);
+      }
+    }
+  };
+
+  const handleFusion = async (buttonName: string, autoCall: boolean = false, latestConversationHistories?: { [modelId: string]: Array<{ role: string; content: string }> }) => {
+    if (!autoCall) {
+      setIsFusionLoading(true);
+    }
+    setFusionResult(''); // Clear previous fusion result immediately
+
+    const historiesForFusion = latestConversationHistories || conversationHistories;
+
+    if (Object.keys(historiesForFusion).length === 0) {
+      console.error('No conversation histories available for fusion');
+      setFusionResult('Error: No conversation histories available for fusion');
+      setIsFusionLoading(false);
+      return;
+    }
+
+    const latestPrompt = historiesForFusion[models[0]]?.slice(-2)[0]?.content || '';
+    const latestResponses = models.map(modelId => 
+      historiesForFusion[modelId]?.slice(-1)[0]?.content || ''
+    );
+
+    console.log('Latest prompt for fusion:', latestPrompt);
+    console.log('Latest responses for fusion:', latestResponses);
+
+    const prePrompts = {
+      Consolidate: "Instruction: Generate a concise, executive-level summary of three different responses to the following question: [INSERT QUESTION HERE]\n\nYour summary should:\n\nBe brief and straight to the point\nUse bullet points or numbered lists for clarity\nHighlight key features or benefits for each option\nMention any standout or highlights\nFormat the summary for easy readability\nUse bold for key points that answer the questions where appropriate.\nUse italics for emphasis where appropriate.\n\nStructure of response:\n\nSummary (to be Bolded): [Summary of responses]\n\n1. [Name of Person] (Bold): [Summary of the Person's Response], and so on.",
+      Compare: "[INSERT COMPARE PRE-PROMPT HERE]",
+      Highlight: "[INSERT HIGHLIGHT PRE-PROMPT HERE]",
+      Merge: "[INSERT FUSION PRE-PROMPT HERE]"
+    };
+
+    const fusionModel = 'gemini-1.5-flash-002';
+
+    const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Question: ${latestPrompt}\n\nPerson 1: ${latestResponses[0]}\nPerson 2: ${latestResponses[1]}\nPerson 3: ${latestResponses[2]}`;
+
+    console.log('Fusion prompt:', prompt);
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          sessionId,
+          conversationHistories: {},
+          selectedModel: fusionModel,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate Fusion response');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(5));
+                if (data.content) {
+                  setFusionResult(prev => prev + data.content);
+                }
+              } catch (error) {
+                console.error('Error parsing JSON:', error);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in Fusion:', error);
+      setFusionResult('Error generating Fusion response');
+    } finally {
+      if (!autoCall) {
+        setIsFusionLoading(false);
+      }
+      if (fusionResultRef.current) {
+        fusionResultRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }
+  };
+
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col h-screen">
       <Header />
       {/* Main content area with conversation history and result cards */}
       <main className={cn(
-        "flex-1 w-full overflow-y-auto pb-32",
+        "flex-1 w-full overflow-y-auto", // Remove pb-48 as we're using padding-bottom in CSS
         isInitialState ? "flex items-center justify-center" : ""
       )}>
         <div className="container mx-auto p-6">
@@ -299,6 +497,14 @@ export default function SDKPlayground() {
                       />
                     ))}
                   </div>
+                  {(activeButton || fusionResult) && (
+                    <FusionResult
+                      result={fusionResult}
+                      isLoading={isFusionLoading}
+                      ref={fusionResultRef}
+                      models={models}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -307,8 +513,60 @@ export default function SDKPlayground() {
       </main>
 
       {/* Footer with input form */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-gray-50 border-t border-border px-10 py-4">
-        <StreamingStatus streamingModels={streamingModels} />
+      <footer className="bg-gray-50 border-t border-border px-10 py-4 z-10">
+        <div className="flex justify-between items-center mb-4">
+          {isStreaming || isFusionLoading ? (
+            <StreamingStatus streamingModels={streamingModels} isFusionLoading={isFusionLoading} activeButton={activeButton} />
+          ) : (
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="xs"
+                className="text-xs flex items-center"
+                onClick={() => handleButtonClick('Consolidate')}
+              >
+                {activeButton === 'Consolidate' && (
+                  <img
+                    src="/status-enabled.svg"
+                    alt="Enabled"
+                    className="mr-2"
+                  />
+                )}
+                Consolidate
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                className="text-xs flex items-center"
+                onClick={() => handleButtonClick('Compare')}
+              >
+                {activeButton === 'Compare' && (
+                  <img
+                    src="/status-enabled.svg"
+                    alt="Enabled"
+                    className="mr-2"
+                  />
+                )}
+                Compare
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                className="text-xs flex items-center"
+                onClick={() => handleButtonClick('Highlight')}
+              >
+                {activeButton === 'Highlight' && (
+                  <img
+                    src="/status-enabled.svg"
+                    alt="Enabled"
+                    className="mr-2"
+                  />
+                )}
+                Highlight
+              </Button>
+            </div>
+          )}
+        </div>
         <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4">
           <div className="w-full flex items-end space-x-4">
             <div className="flex-1">

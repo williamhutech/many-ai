@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,10 +15,17 @@ interface ResultCardProps {
 const ResultCard: React.FC<ResultCardProps> = React.memo(
   ({ index, models, results, handleModelChange }) => {
     const [modelOptions, setModelOptions] = useState<Model[]>([]);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
       setModelOptions(getAllModels());
     }, []);
+
+    useEffect(() => {
+      if (textareaRef.current) {
+        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+      }
+    }, [results[index]]);
 
     return (
       <Card className={cn('flex flex-col h-full max-h-[calc(100vh-300px)]', 'transition-all duration-200')}>

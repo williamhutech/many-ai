@@ -211,6 +211,22 @@ export async function POST(req: Request) {
             await writeChunk(chunk.choices[0].delta.content);
           }
         }
+      } else if (provider.clientName === 'gemini-1.5-flash-002') {
+        const fusionModel = googleClient.getGenerativeModel({ model: selectedModel });
+        const fusionChat = fusionModel.startChat({
+          history: history.map((msg: { role: string; content: string }) => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: msg.content,
+          })),
+        });
+
+        const fusionResult = await fusionChat.sendMessageStream(prompt);
+
+        for await (const chunk of fusionResult.stream) {
+          const chunkText = chunk.text();
+          modelResponse += chunkText;
+          await writeChunk(chunkText);
+        }
       }
 
       // Save the response to Supabase

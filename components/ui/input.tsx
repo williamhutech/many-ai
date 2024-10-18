@@ -2,7 +2,9 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 export interface InputProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  onSubmit?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+}
 
 const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
   ({ className, onSubmit, ...props }, ref) => {
@@ -38,9 +40,7 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
           if (typeof ref === 'function') {
             ref(node);
           } else if (ref) {
-            if (ref && typeof ref !== 'function') {
-              (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-            }
+            (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
           }
           if (textareaRef.current) {
             (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;

@@ -7,45 +7,41 @@ interface TruncatedTextProps {
 
 export const TruncatedText: React.FC<TruncatedTextProps> = ({ text, maxLines }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [truncatedText, setTruncatedText] = useState(text);
+  const [isTruncated, setIsTruncated] = useState(false);
 
   useEffect(() => {
-    const truncateText = () => {
+    const checkTruncation = () => {
       const container = containerRef.current;
       if (!container) return;
 
       const lineHeight = parseInt(window.getComputedStyle(container).lineHeight);
       const maxHeight = lineHeight * maxLines;
 
-      let low = 0;
-      let high = text.length;
-      let mid;
-
-      while (low <= high) {
-        mid = Math.floor((low + high) / 2);
-        container.textContent = text.slice(0, mid) + '...';
-
-        if (container.offsetHeight > maxHeight) {
-          high = mid - 1;
-        } else {
-          low = mid + 1;
-        }
-      }
-
-      setTruncatedText(text.slice(0, high) + (high < text.length ? '...' : ''));
+      setIsTruncated(container.scrollHeight > maxHeight);
     };
 
-    truncateText();
-    window.addEventListener('resize', truncateText);
+    checkTruncation();
+    window.addEventListener('resize', checkTruncation);
 
     return () => {
-      window.removeEventListener('resize', truncateText);
+      window.removeEventListener('resize', checkTruncation);
     };
   }, [text, maxLines]);
 
   return (
-    <div ref={containerRef} className="text-sm text-gray-800">
-      {truncatedText}
+    <div
+      ref={containerRef}
+      className="text-sm text-gray-800"
+      style={{
+        display: '-webkit-box',
+        WebkitLineClamp: maxLines,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}
+    >
+      {text}
+      {isTruncated && '...'}
     </div>
   );
 };
