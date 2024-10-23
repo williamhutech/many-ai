@@ -27,8 +27,12 @@ const FusionResult = forwardRef<HTMLDivElement, FusionResultProps>(
       models.forEach((modelId, index) => {
         const provider = getProviderForModel(modelId);
         if (provider) {
-          const regex = new RegExp(`Person ${index + 1}`, 'g');
-          modifiedText = modifiedText.replace(regex, provider.nickname);
+          // Replace both formats (Person X and named characters)
+          const regexPerson = new RegExp(`Person ${index + 1}`, 'g');
+          const regexName = new RegExp(`${index === 0 ? 'Anny' : index === 1 ? 'Ben' : 'Clarice'}`, 'g');
+          modifiedText = modifiedText
+            .replace(regexPerson, provider.nickname)
+            .replace(regexName, provider.nickname);
         }
       });
       return modifiedText;

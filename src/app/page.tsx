@@ -12,7 +12,12 @@ import Image from 'next/image';
 const Header = () => (
   <header className="bg-white border-b border-gray-100 px-10 py-3 flex justify-between items-center">
     <h1 className="text-lg font-semibold font-inter">
-      <span className="cursor-pointer flex items-center" onClick={() => window.location.reload()}>
+      <span className="cursor-pointer flex items-center" onClick={() => {
+        amplitude.track('Session Refreshed', {
+          location: 'header_logo'
+        });
+        window.location.reload();
+      }}>
         <Image src="/logo.svg" alt="ManyAI Logo" width={32} height={32} className="mr-4" />
         {/* <Image src="/manyai_logo.svg" alt="ManyAI Logo" width={80} height={20} className="mr-2" /> */}
       </span>
@@ -20,12 +25,13 @@ const Header = () => (
     <div className="space-x-3">
       <div className="relative inline-block">
         <Button variant="outline" size="xs" className="text-xs group">
-          v1.02
+          v1.04
           <div className="absolute top-full left-0 mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
             <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
             <ul className="list-disc list-inside text-left">
-              <li>Dynamic UI for extremely long prompts</li>
-              <li>Input box is now scrollable</li>
+              <li>Added multi-model responses</li>
+              <li>Added Summarise, Compare, and Merge</li>
+              <li>Fixed: button errors</li>
             </ul>
           </div>
         </Button>
@@ -37,7 +43,7 @@ const Header = () => (
 );
 
 export default function SDKPlayground() {
-  const defaultModels = ['gemini-1.5-pro-002', 'gpt-4o-2024-08-06', 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo'];
+  const defaultModels = ['gemini-1.5-flash-002', 'gpt-4o-mini-2024-07-18', 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo'];
 
   // Initialize state variables
   const [models, setModels] = useState<string[]>(() => {
@@ -60,29 +66,17 @@ export default function SDKPlayground() {
   const [streamingModels, setStreamingModels] = useState<string[]>([]);
   const [isInitialFooter, setIsInitialFooter] = useState(true);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isConsolidateEnabled, setIsConsolidateEnabled] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('isConsolidateEnabled') === 'true';
-    }
-    return true;
-  });
-  const [isCompareEnabled, setIsCompareEnabled] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('isCompareEnabled') === 'true';
-    }
-    return false;
-  });
-  const [isHighlightEnabled, setIsHighlightEnabled] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('isHighlightEnabled') === 'true';
-    }
-    return false;
-  });
+  const [isConsolidateEnabled, setIsConsolidateEnabled] = useState(false);
+  const [isCompareEnabled, setIsCompareEnabled] = useState(false);
+  const [isMergeEnabled, setIsMergeEnabled] = useState(false);  // Changed from isHighlightEnabled
   const [isSuggestMoreEnabled, setIsSuggestMoreEnabled] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
   const [fusionResult, setFusionResult] = useState<string>('');
   const [isFusionLoading, setIsFusionLoading] = useState(false);
   const fusionResultRef = useRef<HTMLDivElement>(null);
+  const [isSummariseEnabled, setIsSummariseEnabled] = useState(false);
+  const [isMultiModelResponseEnabled, setIsMultiModelResponseEnabled] = useState(false);
+  const [isFirstPrompt, setIsFirstPrompt] = useState(true);
 
   // Initialize Amplitude when the component mounts
   useEffect(() => {
@@ -98,11 +92,6 @@ export default function SDKPlayground() {
       },
     });
   }, []);
-
-  // Refresh the webpage when the title is clicked
-  const handleTitleClick = () => {
-    window.location.reload();
-  };
 
   // Set up a new session and clear conversation histories on component mount
   useEffect(() => {
@@ -146,6 +135,7 @@ export default function SDKPlayground() {
     setIsInitialFooter(false);
     if (!sessionId) return;
     setIsLoading(true);
+    setIsStreaming(true); // Add this line to show streaming status immediately
     const currentInput = input;
     setInput('');
 
@@ -162,10 +152,17 @@ export default function SDKPlayground() {
       }, 250);
     }
 
-    // Track prompt submission event
+    // If it's the first prompt and Multi-Model Response is enabled
+    if (isFirstPrompt && isMultiModelResponseEnabled) {
+      setIsFusionLoading(true);
+    }
+    setIsFirstPrompt(false);
+
+    // Track prompt submission event with active fusion feature
     amplitude.track('Prompt Submitted', {
       promptLength: currentInput.length,
       selectedModels: models,
+      activeFusion: activeButton || 'none'  // Will be 'Multi-Model Response', 'Summarise', 'Compare', 'Highlight', or 'none'
     });
 
     // Add new conversation entry
@@ -298,9 +295,15 @@ export default function SDKPlayground() {
     console.log('Final updated conversation histories:', updatedConversationHistories);
 
     // Check if a fusion button is active and trigger fusion
-    if (activeButton) {
+    if (activeButton && responses.every(response => response !== '')) {
       console.log('Triggering fusion with active button:', activeButton);
       await handleFusion(activeButton, true, updatedConversationHistories);
+    }
+
+    // Check if Multi-Model Response is active and trigger fusion
+    if (isMultiModelResponseEnabled && responses.every(response => response !== '')) {
+      console.log('Triggering Multi-Model Response fusion');
+      await handleFusion('Multi-Model Response', true, updatedConversationHistories);
     }
 
     setIsLoading(false);
@@ -330,39 +333,51 @@ export default function SDKPlayground() {
   }, [streamingModels]);
 
   const handleButtonClick = (buttonName: string) => {
-    if (activeButton === buttonName) {
-      setActiveButton(null);
-      setFusionResult('');
-      localStorage.removeItem(`is${buttonName}Enabled`);
-      switch (buttonName) {
-        case 'Consolidate':
-          setIsConsolidateEnabled(false);
-          break;
-        case 'Compare':
+    let newState = false;
+    switch (buttonName) {
+      case 'Multi-Model Response':
+        newState = !isMultiModelResponseEnabled;
+        setIsMultiModelResponseEnabled(newState);
+        if (newState) {
+          setIsFusionLoading(false);  // Don't set loading until we have responses
+          setIsSummariseEnabled(false);
           setIsCompareEnabled(false);
-          break;
-        case 'Highlight':
-          setIsHighlightEnabled(false);
-          break;
-      }
-    } else {
-      setActiveButton(buttonName);
-      localStorage.setItem(`is${buttonName}Enabled`, 'true');
-      switch (buttonName) {
-        case 'Consolidate':
-          setIsConsolidateEnabled(true);
-          break;
-        case 'Compare':
-          setIsCompareEnabled(true);
-          break;
-        case 'Highlight':
-          setIsHighlightEnabled(true);
-          break;
-      }
-      if (conversations.length > 0) {
-        handleFusion(buttonName, false);
-      }
+          setIsMergeEnabled(false);
+        }
+        break;
+      case 'Summarise':
+        newState = !isSummariseEnabled;
+        setIsSummariseEnabled(newState);
+        if (newState) {
+          setIsFusionLoading(false);  // Don't set loading until we have responses
+          setIsMultiModelResponseEnabled(false);
+          setIsCompareEnabled(false);
+          setIsMergeEnabled(false);
+        }
+        break;
+      case 'Compare':
+        newState = !isCompareEnabled;
+        setIsCompareEnabled(newState);
+        if (newState) {
+          setIsFusionLoading(false);  // Don't set loading until we have responses
+          setIsMultiModelResponseEnabled(false);
+          setIsSummariseEnabled(false);
+          setIsMergeEnabled(false);
+        }
+        break;
+      case 'Merge':
+        newState = !isMergeEnabled;
+        setIsMergeEnabled(newState);
+        if (newState) {
+          setIsFusionLoading(false);  // Don't set loading until we have responses
+          setIsMultiModelResponseEnabled(false);
+          setIsSummariseEnabled(false);
+          setIsCompareEnabled(false);
+        }
+        break;
     }
+    setActiveButton(newState ? buttonName : null);
+    localStorage.setItem(`is${buttonName.replace(/\s+/g, '')}Enabled`, newState.toString());
   };
 
   const handleFusion = async (buttonName: string, autoCall: boolean = false, latestConversationHistories?: { [modelId: string]: Array<{ role: string; content: string }> }) => {
@@ -389,15 +404,15 @@ export default function SDKPlayground() {
     console.log('Latest responses for fusion:', latestResponses);
 
     const prePrompts = {
-      Consolidate: "Instruction: Generate a concise, executive-level summary of three different responses to the following question: [INSERT QUESTION HERE]\n\nYour summary should:\n\nBe brief and straight to the point\nUse bullet points or numbered lists for clarity\nHighlight key features or benefits for each option\nMention any standout or highlights\nFormat the summary for easy readability\nUse bold for key points that answer the questions where appropriate.\nUse italics for emphasis where appropriate.\n\nStructure of response:\n\nSummary (to be Bolded): [Summary of responses]\n\n1. [Name of Person] (Bold): [Summary of the Person's Response], and so on.",
+      "Multi-Model Response": "Instruction: Analyze and synthesize the responses from three different persons to the following question [INSERT QUESTION HERE] Your synthesis should: provide a comprehensive answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models use bold or italics where appropriate highlight disagreements between responses (and refer to the person) if any you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question",
+      Summarise: "Instruction: Generate a concise, executive-level summary of three different responses to the following question: [INSERT QUESTION HERE]\n\nYour summary should:\n\nBe brief and straight to the point\nUse bullet points or numbered lists for clarity\nHighlight key features or benefits for each option\nMention any standout or highlights\nFormat the summary for easy readability\nUse bold for key points that answer the questions where appropriate.\nUse italics for emphasis where appropriate.\n\nStructure of response:\n\nSummary (to be Bolded): [Summary of responses]\n\n1. [Name of Person] (Bold): [Summary of the Person's Response], and so on.",
       Compare: "[INSERT COMPARE PRE-PROMPT HERE]",
-      Highlight: "[INSERT HIGHLIGHT PRE-PROMPT HERE]",
-      Merge: "[INSERT FUSION PRE-PROMPT HERE]"
+      Merge: "Instruction: Take all 3 responses and merge into 1 single output in respond to [INSERT PROMPT HERE] Your merge should: prioritse the exact ask of the prompt/request consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one you may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the prompt"
     };
 
     const fusionModel = 'gemini-1.5-flash-002';
 
-    const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Question: ${latestPrompt}\n\nPerson 1: ${latestResponses[0]}\nPerson 2: ${latestResponses[1]}\nPerson 3: ${latestResponses[2]}`;
+    const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Question: ${latestPrompt}\n\nAnny: ${latestResponses[0]}\nBen: ${latestResponses[1]}\nClarice: ${latestResponses[2]}`;
 
     console.log('Fusion prompt:', prompt);
 
@@ -423,7 +438,10 @@ export default function SDKPlayground() {
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            setIsFusionLoading(false); // Set loading to false when stream is complete
+            break;
+          }
 
           const chunk = decoder.decode(value);
           const lines = chunk.split('\n');
@@ -444,15 +462,23 @@ export default function SDKPlayground() {
     } catch (error) {
       console.error('Error in Fusion:', error);
       setFusionResult('Error generating Fusion response');
+      setIsFusionLoading(false); // Set loading to false on error
     } finally {
-      if (!autoCall) {
-        setIsFusionLoading(false);
-      }
       if (fusionResultRef.current) {
         fusionResultRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
     }
   };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedSummarise = localStorage.getItem('isSummariseEnabled');
+      setIsSummariseEnabled(storedSummarise === null ? true : storedSummarise === 'true');
+      setIsMultiModelResponseEnabled(localStorage.getItem('isMultiModelResponseEnabled') === 'true');
+      setIsCompareEnabled(localStorage.getItem('isCompareEnabled') === 'true');
+      setIsMergeEnabled(localStorage.getItem('isMergeEnabled') === 'true');  // Updated
+    }
+  }, []);
 
   // Render the user interface with header, main content, and footer
   return (
@@ -497,7 +523,7 @@ export default function SDKPlayground() {
                       />
                     ))}
                   </div>
-                  {(activeButton || fusionResult) && (
+                  {(activeButton || fusionResult) && conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '') && (
                     <FusionResult
                       result={fusionResult}
                       isLoading={isFusionLoading}
@@ -515,55 +541,43 @@ export default function SDKPlayground() {
       {/* Footer with input form */}
       <footer className="bg-gray-50 border-t border-border px-10 py-4 z-10">
         <div className="flex justify-between items-center mb-4">
-          {isStreaming || isFusionLoading ? (
-            <StreamingStatus streamingModels={streamingModels} isFusionLoading={isFusionLoading} activeButton={activeButton} />
+          {(isStreaming || isFusionLoading) ? (
+            <StreamingStatus 
+              streamingModels={streamingModels} 
+              isFusionLoading={isFusionLoading} 
+              activeButton={activeButton}
+              hasResponses={conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '')}
+            />
           ) : (
             <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="xs"
-                className="text-xs flex items-center"
-                onClick={() => handleButtonClick('Consolidate')}
-              >
-                {activeButton === 'Consolidate' && (
-                  <img
-                    src="/status-enabled.svg"
-                    alt="Enabled"
-                    className="mr-2"
-                  />
-                )}
-                Consolidate
-              </Button>
-              <Button
-                variant="outline"
-                size="xs"
-                className="text-xs flex items-center"
-                onClick={() => handleButtonClick('Compare')}
-              >
-                {activeButton === 'Compare' && (
-                  <img
-                    src="/status-enabled.svg"
-                    alt="Enabled"
-                    className="mr-2"
-                  />
-                )}
-                Compare
-              </Button>
-              <Button
-                variant="outline"
-                size="xs"
-                className="text-xs flex items-center"
-                onClick={() => handleButtonClick('Highlight')}
-              >
-                {activeButton === 'Highlight' && (
-                  <img
-                    src="/status-enabled.svg"
-                    alt="Enabled"
-                    className="mr-2"
-                  />
-                )}
-                Highlight
-              </Button>
+              {['Multi-Model Response', 'Summarise', 'Compare', 'Merge'].map((buttonName) => (
+                <Button
+                  key={buttonName}
+                  variant="outline"
+                  size="xs"
+                  className={`text-xs flex items-center ${
+                    (buttonName === 'Multi-Model Response' && isMultiModelResponseEnabled) ||
+                    (buttonName === 'Summarise' && isSummariseEnabled) ||
+                    (buttonName === 'Compare' && isCompareEnabled) ||
+                    (buttonName === 'Merge' && isMergeEnabled)  // Updated
+                      ? 'bg-white'
+                      : 'bg-gray-50'
+                  }`}
+                  onClick={() => handleButtonClick(buttonName)}
+                >
+                  {((buttonName === 'Multi-Model Response' && isMultiModelResponseEnabled) ||
+                    (buttonName === 'Summarise' && isSummariseEnabled) ||
+                    (buttonName === 'Compare' && isCompareEnabled) ||
+                    (buttonName === 'Merge' && isMergeEnabled)) && (
+                    <img
+                      src="/status-enabled.svg"
+                      alt="Enabled"
+                      className="mr-2"
+                    />
+                  )}
+                  {buttonName}
+                </Button>
+              ))}
             </div>
           )}
         </div>
