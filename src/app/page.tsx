@@ -25,7 +25,7 @@ const Header = () => (
     <div className="space-x-3">
       <div className="relative inline-block">
         <Button variant="outline" size="xs" className="text-xs group">
-          v1.04
+          v1.05
           <div className="absolute top-full left-0 mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
             <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
             <ul className="list-disc list-inside text-left">
@@ -472,11 +472,16 @@ export default function SDKPlayground() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedSummarise = localStorage.getItem('isSummariseEnabled');
-      setIsSummariseEnabled(storedSummarise === null ? true : storedSummarise === 'true');
-      setIsMultiModelResponseEnabled(localStorage.getItem('isMultiModelResponseEnabled') === 'true');
+      const storedMultiModelResponse = localStorage.getItem('isMultiModelResponseEnabled');
+      setIsMultiModelResponseEnabled(storedMultiModelResponse === null ? true : storedMultiModelResponse === 'true');
+      setIsSummariseEnabled(localStorage.getItem('isSummariseEnabled') === 'true');
       setIsCompareEnabled(localStorage.getItem('isCompareEnabled') === 'true');
-      setIsMergeEnabled(localStorage.getItem('isMergeEnabled') === 'true');  // Updated
+      setIsMergeEnabled(localStorage.getItem('isMergeEnabled') === 'true');
+      
+      // Set the active button if Multi-Model Response is enabled by default
+      if (storedMultiModelResponse === null) {
+        setActiveButton('Multi-Model Response');
+      }
     }
   }, []);
 
