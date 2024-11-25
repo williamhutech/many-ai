@@ -3,44 +3,141 @@
 import { useState, useEffect, useRef } from 'react';
 import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
-import { Button, Input, TruncatedText } from "@/components/ui";
+import { Button, Input, TruncatedText, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getProviderForModel } from '@/config/models';
 import { InitialModelSelection, StreamingStatus, ResultCard, FusionResult } from '@/components/pages';
 import Image from 'next/image';
 
-const Header = () => (
-  <header className="bg-white border-b border-gray-100 px-10 py-3 flex justify-between items-center">
-    <h1 className="text-lg font-semibold font-inter">
-      <span className="cursor-pointer flex items-center" onClick={() => {
-        amplitude.track('Session Refreshed', {
-          location: 'header_logo'
-        });
-        window.location.reload();
-      }}>
-        <Image src="/logo.svg" alt="ManyAI Logo" width={32} height={32} className="mr-4" />
-        {/* <Image src="/manyai_logo.svg" alt="ManyAI Logo" width={80} height={20} className="mr-2" /> */}
-      </span>
-    </h1>
-    <div className="space-x-3">
-      <div className="relative inline-block">
-        <Button variant="outline" size="xs" className="text-xs group">
-          v1.05
-          <div className="absolute top-full left-0 mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
-            <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
-            <ul className="list-disc list-inside text-left">
-              <li>Added multi-model responses</li>
-              <li>Added Summarise, Compare, and Merge</li>
-              <li>Fixed: button errors</li>
-            </ul>
-          </div>
+const Header = () => {
+  const [mode, setMode] = useState('Fast Model');
+
+  const handleHistoryClick = () => {
+    // Create and append overlay with fade-in animation
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black opacity-0 z-40 transition-opacity duration-300 ease-in-out';
+    document.body.appendChild(overlay);
+
+    // Create and append sidebar with slide-in animation
+    const sidebar = document.createElement('div');
+    sidebar.className = 'fixed left-0 top-0 h-full w-64 bg-white z-50 transform -translate-x-full transition-all duration-300 ease-in-out shadow-2xl';
+    sidebar.innerHTML = `
+      <div class="flex justify-between items-center p-4">
+        <h2 class="text-base font-semibold font-inter pl-4 pt-1">Chat History</h2>
+        <button class="text-gray-500 hover:text-gray-700 transition-colors duration-200" id="closeSidebar">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="absolute inset-0 flex items-center justify-center text-sm text-gray-500 mt-16">
+        Feature coming soon!
+      </div>
+    `;
+    document.body.appendChild(sidebar);
+
+    // Prevent body scroll when sidebar is open
+    document.body.style.overflow = 'hidden';
+
+    // Trigger animations after a small delay
+    requestAnimationFrame(() => {
+      overlay.style.opacity = '0.5';
+      sidebar.classList.remove('-translate-x-full');
+    });
+
+    // Add click handler to close with animations
+    const handleClose = () => {
+      overlay.style.opacity = '0';
+      sidebar.classList.add('-translate-x-full');
+      
+      // Remove elements and restore body scroll after animation completes
+      setTimeout(() => {
+        document.body.style.overflow = '';
+        // Add a small delay between opacity and removal
+        setTimeout(() => {
+          overlay.remove();
+          sidebar.remove();
+        }, 50);
+      }, 300);
+    };
+
+    overlay.addEventListener('click', handleClose);
+    sidebar.querySelector('#closeSidebar')?.addEventListener('click', handleClose);
+  };
+
+  return (
+    <header className="bg-white px-4 sm:px-10 py-4 flex flex-wrap justify-between items-center gap-4">
+      <div className="flex space-x-3">
+        <Button
+          variant="outline"
+          size="xs"
+          className="rounded-lg p-2"
+          onClick={handleHistoryClick}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 3v18h18" />
+            <path d="M18.4 3c-1.2 0-2.4.6-3.1 1.7L7.5 15.5" />
+            <path d="M15.3 4.7l3.1-1.7" />
+            <path d="M15.3 4.7l-1.7 3.1" />
+          </svg>
+        </Button>
+        <Button
+          variant="outline"
+          size="xs"
+          className="text-xs"
+          onClick={() => window.location.reload()}
+        >
+          + New Chat
         </Button>
       </div>
-      <Button variant="outline" size="xs" className="text-xs">Log in</Button>
-      <Button size="xs" className="text-xs">Sign Up</Button>
-    </div>
-  </header>
-);
+      <div className="flex items-center space-x-3">
+        <Select value={mode} onValueChange={setMode}>
+          <SelectTrigger className="h-8 text-xs border border-zinc-200 bg-white w-auto px-3 font-inter">
+            {mode}
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Fast Model" className="text-xs font-inter">
+              <div>
+                <div>Fast Model</div>
+                <div className="text-gray-500 text-[10px]">Prioritising fastest experience</div>
+              </div>
+            </SelectItem>
+            <SelectItem value="Smart Model" className="text-xs font-inter">
+              <div>
+                <div>Smart Model</div>
+                <div className="text-gray-500 text-[10px]">Giving models some time to think</div>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="hidden sm:block">
+          <Button variant="outline" size="xs" className="text-xs group">
+            v2.0
+            <div className="absolute top-full left-0 mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
+              <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
+              <ul className="list-disc list-inside text-left">
+                <li>Added multi-model responses</li>
+                <li>Added Summarise, Compare, and Merge</li>
+                <li>Fixed: button errors</li>
+              </ul>
+            </div>
+          </Button>
+        </div>
+        <Button size="xs" className="text-xs">Sign Up</Button>
+      </div>
+    </header>
+  );
+};
 
 export default function SDKPlayground() {
   const defaultModels = ['gemini-1.5-flash-002', 'gpt-4o-mini-2024-07-18', 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo'];
