@@ -14,8 +14,16 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = 'auto';
-        const newHeight = Math.min(textarea.scrollHeight, 5 * 24); // Assuming 24px line height
+        const maxHeight = 120; // Maximum height in pixels
+        const newHeight = Math.min(textarea.scrollHeight, maxHeight);
         textarea.style.height = `${newHeight}px`;
+        
+        // Update footer content height
+        const footerContent = textarea.closest('footer');
+        if (footerContent) {
+          const extraHeight = newHeight - 40; // 40px is the base height
+          footerContent.style.transform = `translateY(-${extraHeight}px)`;
+        }
       }
     }, [props.value]);
 
@@ -33,7 +41,7 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
       <textarea
         className={cn(
           "flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
-          "min-h-[40px] max-h-[120px] resize-none overflow-y-auto",
+          "min-h-[40px] max-h-[120px] resize-none overflow-y-auto mobile-input",
           className
         )}
         ref={(node) => {

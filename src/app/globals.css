@@ -31,6 +31,8 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --header-height: 64px;
+    --footer-height: 120px;
   }
 }
 
@@ -67,6 +69,7 @@ body {
 /* Add these styles at the end of the file */
 html, body, #__next {
   height: 100%;
+  min-height: -webkit-fill-available;
   display: flex;
   flex-direction: column;
 }
@@ -74,11 +77,23 @@ html, body, #__next {
 main {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 10px; /* Ensure enough space for the footer */
+  padding-top: calc(var(--header-height) + 10px);
+  max-height: 100vh;
+  height: 100vh;
+  padding-bottom: calc(var(--footer-height) + 20px);
 }
 
 footer {
-  flex-shrink: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fafafa;
+  z-index: 50;
+  min-height: var(--footer-height);
+  padding-bottom: env(safe-area-inset-bottom);
+  transition: transform 0.2s ease-out;
+  will-change: transform;
 }
 
 .container {
@@ -116,6 +131,14 @@ footer {
 @media screen and (max-width: 768px) {
   input, textarea, select {
     font-size: 16px !important;
+  }
+  .mobile-text {
+    font-size: 14px !important;
+  }
+  .mobile-input,
+  .mobile-input::placeholder {
+    font-family: 'Inter', Arial, Helvetica, sans-serif !important;
+    font-size: 14px !important;
   }
 }
 

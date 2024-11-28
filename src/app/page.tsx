@@ -66,7 +66,7 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-white px-4 sm:px-10 py-4 flex flex-wrap justify-between items-center gap-4">
+    <header className="bg-white px-4 sm:px-10 py-4 flex flex-wrap justify-between items-center gap-4 fixed top-0 left-0 right-0">
       <div className="flex space-x-3">
         <Button
           variant="outline"
@@ -85,10 +85,8 @@ const Header = () => {
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M3 3v18h18" />
-            <path d="M18.4 3c-1.2 0-2.4.6-3.1 1.7L7.5 15.5" />
-            <path d="M15.3 4.7l3.1-1.7" />
-            <path d="M15.3 4.7l-1.7 3.1" />
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
           </svg>
         </Button>
         <Button
@@ -591,7 +589,7 @@ export default function SDKPlayground() {
         "flex-1 w-full overflow-y-auto", // Remove pb-48 as we're using padding-bottom in CSS
         isInitialState ? "flex items-center justify-center" : ""
       )}>
-        <div className="container mx-auto p-6">
+        <div className="container mx-auto p-6 pb-[var(--footer-height)]">
           {(isInitialState || isDismissing) ? (
             <div className={cn(
               "transition-opacity duration-500",
@@ -641,50 +639,43 @@ export default function SDKPlayground() {
       </main>
 
       {/* Footer with input form */}
-      <footer className="bg-gray-50 border-t border-border px-10 py-4 z-10">
+      <footer className="bg-gray-50 border-t border-border px-4 sm:px-10 py-2 z-10">
         <div className="flex justify-between items-center mb-4">
-          {(isStreaming || isFusionLoading) ? (
+          {(isStreaming || isFusionLoading) && (
             <StreamingStatus 
               streamingModels={streamingModels} 
               isFusionLoading={isFusionLoading} 
               activeButton={activeButton}
               hasResponses={conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '')}
             />
-          ) : (
-            <div className="flex space-x-2">
-              {['Multi-Model Response', 'Summarise', 'Compare', 'Merge'].map((buttonName) => (
-                <Button
-                  key={buttonName}
-                  variant="outline"
-                  size="xs"
-                  className={`text-xs flex items-center ${
-                    (buttonName === 'Multi-Model Response' && isMultiModelResponseEnabled) ||
-                    (buttonName === 'Summarise' && isSummariseEnabled) ||
-                    (buttonName === 'Compare' && isCompareEnabled) ||
-                    (buttonName === 'Merge' && isMergeEnabled)  // Updated
-                      ? 'bg-white'
-                      : 'bg-gray-50'
-                  }`}
-                  onClick={() => handleButtonClick(buttonName)}
-                >
-                  {((buttonName === 'Multi-Model Response' && isMultiModelResponseEnabled) ||
-                    (buttonName === 'Summarise' && isSummariseEnabled) ||
-                    (buttonName === 'Compare' && isCompareEnabled) ||
-                    (buttonName === 'Merge' && isMergeEnabled)) && (
-                    <img
-                      src="/status-enabled.svg"
-                      alt="Enabled"
-                      className="mr-2"
-                    />
-                  )}
-                  {buttonName}
-                </Button>
-              ))}
-            </div>
           )}
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4">
-          <div className="w-full flex items-end space-x-4">
+          <div className="w-full flex items-end gap-2 sm:gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onClick={() => {
+                // Attachment functionality will be implemented later
+                console.log('Attachment button clicked');
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </Button>
             <div className="flex-1">
               <Input
                 id="message-input"
@@ -711,26 +702,20 @@ export default function SDKPlayground() {
               {isLoading ? (
                 <>
                   <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent inline-block"></span>
-                  Generating...
+                  <span className="mobile-text">Generating...</span>
                 </>
               ) : (
-                'Send'
+                <span className="mobile-text">Send</span>
               )}
             </Button>
           </div>
           <p className="text-xs text-gray-500 text-center">
             {isInitialFooter
-              ? "By prompting, you agree to our Terms and have read our Privacy Policy."
+              ? "By continuing, you agree to our Terms and our Privacy Policy."
               : "AI make mistakes. That's why we're here for multi-model experiences."}
           </p>
         </form>
       </footer>
-
-      {showCopiedPopup && (
-        <div className="fixed bottom-4 left-4 bg-gray-100 text-gray-600 px-3 py-2 rounded-md text-xs z-50 copied-popup font-regular">
-          Copied to Clipboard
-        </div>
-      )}
     </div>
   );
 }
