@@ -1,7 +1,6 @@
 "use client";
 
 import Head from 'next/head';
-
 import { useState, useEffect, useRef } from 'react';
 import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
@@ -665,41 +664,14 @@ export default function SDKPlayground() {
               }}
               onSubmit={handleSubmit}
               placeholder="Enter your message..."
-              className="w-full placeholder-gray-500 placeholder-opacity-100 focus:placeholder-opacity-0"
-            >
-              <button
-                type="button"
-                className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors"
-                onClick={() => {
-                  console.log('Attachment button clicked');
-                }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-zinc-500"
+              leftElement={
+                <button
+                  type="button"
+                  className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors"
+                  onClick={() => {
+                    console.log('Attachment button clicked');
+                  }}
                 >
-                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                </svg>
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading || input.trim() === ''}
-                className={cn(
-                  "p-1.5 rounded-md transition-colors bg-zinc-100 hover:bg-zinc-200",
-                  (isLoading || input.trim() === '') && "opacity-100 cursor-not-allowed"
-                )}
-              >
-                {isLoading ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent inline-block"></span>
-                ) : (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="16"
@@ -712,12 +684,41 @@ export default function SDKPlayground() {
                     strokeLinejoin="round"
                     className="text-zinc-500"
                   >
-                    <path d="M5 12h14" />
-                    <path d="m12 5 7 7-7 7" />
+                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                   </svg>
-                )}
-              </button>
-            </Input>
+                </button>
+              }
+              rightElement={
+                <button
+                  type="submit"
+                  disabled={isLoading || input.trim() === ''}
+                  className={cn(
+                    "p-1.5 rounded-md transition-colors bg-zinc-100 hover:bg-zinc-200",
+                    (isLoading || input.trim() === '') && "opacity-100 cursor-not-allowed"
+                  )}
+                >
+                  {isLoading ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent inline-block"></span>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-zinc-500"
+                    >
+                      <path d="M5 12h14" />
+                      <path d="m12 5 7 7-7 7" />
+                    </svg>
+                  )}
+                </button>
+              }
+            />
           </div>
           <p className="text-xs text-gray-500 text-center">
             {isInitialFooter

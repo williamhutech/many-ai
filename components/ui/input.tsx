@@ -4,24 +4,25 @@ import { cn } from "@/lib/utils"
 export interface InputProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   onSubmit?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  leftElement?: React.ReactNode;
+  rightElement?: React.ReactNode;
 }
 
 const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
-  ({ className, onSubmit, ...props }, ref) => {
+  ({ className, onSubmit, leftElement, rightElement, ...props }, ref) => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
     React.useEffect(() => {
       const textarea = textareaRef.current;
       if (textarea) {
         textarea.style.height = 'auto';
-        const maxHeight = 120; // Maximum height in pixels
+        const maxHeight = 120;
         const newHeight = Math.min(textarea.scrollHeight, maxHeight);
         textarea.style.height = `${newHeight}px`;
         
-        // Update footer content height
         const footerContent = textarea.closest('footer');
         if (footerContent) {
-          const extraHeight = newHeight - 40; // 40px is the base height
+          const extraHeight = newHeight - 40;
           footerContent.style.transform = `translateY(-${extraHeight}px)`;
         }
       }
@@ -39,11 +40,17 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
 
     return (
       <div className="relative flex items-center w-full">
+        {leftElement && (
+          <div className="absolute left-2 flex items-center">
+            {leftElement}
+          </div>
+        )}
         <textarea
           className={cn(
-            "flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 pr-20 text-sm ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
+            "flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
             "min-h-[40px] max-h-[120px] resize-none overflow-y-auto mobile-input touch-manipulation",
-            "touch-action: manipulation",
+            leftElement && "pl-10",
+            rightElement && "pr-20",
             className
           )}
           ref={(node) => {
@@ -60,14 +67,16 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
           onKeyDown={handleKeyDown}
           {...props}
         />
-        <div className="absolute right-2 flex items-center space-x-1">
-          {props.children}
-        </div>
+        {rightElement && (
+          <div className="absolute right-2 flex items-center space-x-1">
+            {rightElement}
+          </div>
+        )}
       </div>
-    )
+    );
   }
-)
+);
 
-Input.displayName = "Input"
+Input.displayName = "Input";
 
-export { Input }
+export { Input };
