@@ -131,14 +131,16 @@ footer {
 @media screen and (max-width: 768px) {
   input, textarea, select {
     font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
   }
   .mobile-text {
-    font-size: 14px !important;
+    font-size: 16px !important;
   }
   .mobile-input,
   .mobile-input::placeholder {
     font-family: 'Inter', Arial, Helvetica, sans-serif !important;
-    font-size: 14px !important;
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
   }
 }
 

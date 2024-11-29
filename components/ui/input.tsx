@@ -38,26 +38,32 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
     };
 
     return (
-      <textarea
-        className={cn(
-          "flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
-          "min-h-[40px] max-h-[120px] resize-none overflow-y-auto mobile-input",
-          className
-        )}
-        ref={(node) => {
-          if (typeof ref === 'function') {
-            ref(node);
-          } else if (ref) {
-            (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-          }
-          if (textareaRef.current) {
-            (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-          }
-        }}
-        rows={1}
-        onKeyDown={handleKeyDown}
-        {...props}
-      />
+      <div className="relative flex items-center w-full">
+        <textarea
+          className={cn(
+            "flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 pr-20 text-sm ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
+            "min-h-[40px] max-h-[120px] resize-none overflow-y-auto mobile-input touch-manipulation",
+            "touch-action: manipulation",
+            className
+          )}
+          ref={(node) => {
+            if (typeof ref === 'function') {
+              ref(node);
+            } else if (ref) {
+              (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+            }
+            if (textareaRef.current) {
+              (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
+            }
+          }}
+          rows={1}
+          onKeyDown={handleKeyDown}
+          {...props}
+        />
+        <div className="absolute right-2 flex items-center space-x-1">
+          {props.children}
+        </div>
+      </div>
     )
   }
 )
