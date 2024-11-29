@@ -693,12 +693,15 @@ export default function SDKPlayground() {
                   type="submit"
                   disabled={isLoading || input.trim() === ''}
                   className={cn(
-                    "p-1.5 rounded-md transition-colors bg-zinc-100 hover:bg-zinc-200",
+                    "w-7 h-7 flex items-center justify-center rounded-md transition-colors",
+                    input.trim() !== '' 
+                      ? "bg-zinc-200 hover:bg-zinc-300"
+                      : "bg-zinc-100 hover:bg-zinc-200",
                     (isLoading || input.trim() === '') && "opacity-100 cursor-not-allowed"
                   )}
                 >
                   {isLoading ? (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent inline-block"></span>
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-transparent"></span>
                   ) : (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -720,7 +723,10 @@ export default function SDKPlayground() {
               }
             />
           </div>
-          <p className="text-xs text-gray-500 text-center">
+          <p className={cn(
+            "text-xs text-gray-500 text-center",
+            !isInitialFooter && "hide-on-mobile"
+          )}>
             {isInitialFooter
               ? "By continuing, you agree to our Terms and our Privacy Policy."
               : "AI make mistakes. That's why we're here for multi-model experiences."}
