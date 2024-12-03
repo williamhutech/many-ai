@@ -9,9 +9,20 @@ import { cn } from "@/lib/utils";
 import { getProviderForModel } from '@/config/models';
 import { InitialModelSelection, StreamingStatus, ResultCard, FusionResult } from '@/components/pages';
 import Image from 'next/image';
+import { getDefaultModels } from '@/config/models';
 
-const Header = () => {
-  const [mode, setMode] = useState('Fast Model');
+const Header = ({ mode, onModeChange }: { mode: 'fast' | 'smart', onModeChange: (mode: 'fast' | 'smart') => void }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleModeChange = (newMode: string) => {
+    const modeValue = newMode === 'Fast Model' ? 'fast' : 'smart';
+    localStorage.setItem('modelMode', modeValue);
+    onModeChange(modeValue);
+  };
 
   const handleHistoryClick = () => {
     // Create and append overlay with fade-in animation
@@ -100,9 +111,12 @@ const Header = () => {
         </Button>
       </div>
       <div className="flex items-center space-x-3">
-        <Select value={mode} onValueChange={setMode}>
+        <Select 
+          value={mounted ? (mode === 'fast' ? 'Fast Model' : 'Smart Model') : undefined} 
+          onValueChange={handleModeChange}
+        >
           <SelectTrigger className="h-8 text-xs border border-zinc-200 bg-white w-auto px-3 font-inter">
-            {mode}
+            {mounted ? (mode === 'fast' ? 'Fast Model' : 'Smart Model') : ''}
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="Fast Model" className="text-xs font-inter">
@@ -139,16 +153,32 @@ const Header = () => {
 };
 
 export default function SDKPlayground() {
-  const defaultModels = ['gemini-1.5-flash-002', 'gpt-4o-mini-2024-07-18', 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo'];
+  // Initialize mode from localStorage or default to 'fast'
+  const [mode, setMode] = useState<'fast' | 'smart'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('modelMode') as 'fast' | 'smart') || 'fast';
+    }
+    return 'fast';
+  });
 
-  // Initialize state variables
+  // Handle mode changes
+  const handleModeChange = (newMode: 'fast' | 'smart') => {
+    setMode(newMode);
+    localStorage.setItem('modelMode', newMode);
+    const newModels = getDefaultModels(newMode);
+    setModels(newModels);
+  };
+
+  // Initialize models based on the stored mode
   const [models, setModels] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
-      const storedModels = localStorage.getItem('selectedModels');
-      return storedModels ? JSON.parse(storedModels) : defaultModels;
+      const savedMode = localStorage.getItem('modelMode') as 'fast' | 'smart';
+      return getDefaultModels(savedMode || 'fast');
     }
-    return defaultModels;
+    return getDefaultModels('fast');
   });
+
+  // Initialize state variables
   const [input, setInput] = useState('');
   const [conversations, setConversations] = useState<Array<{ prompt: string; results: string[] }>>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -584,7 +614,7 @@ export default function SDKPlayground() {
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col h-screen">
-      <Header />
+      <Header mode={mode} onModeChange={handleModeChange} />
       {/* Main content area with conversation history and result cards */}
       <main className={cn(
         "flex-1 w-full overflow-y-auto", // Remove pb-48 as we're using padding-bottom in CSS

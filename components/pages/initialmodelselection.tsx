@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { getAllModels, Model } from '@/config/models';
+import { getAllModels, Model, getProviderForModel } from '@/config/models';
+import Image from 'next/image';
 
 interface InitialModelSelectionProps {
   models: string[];
@@ -21,22 +22,57 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, h
         Start by Selecting the Models You&apos;d like to Use:
       </h2>
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full">
-        {[0, 1, 2].map((index) => (
-          <Card key={index} className="p-4">
-            <Select value={models[index]} onValueChange={(value) => handleModelChange(index, value)}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {modelOptions.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.displayName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Card>
-        ))}
+        {[0, 1, 2].map((index) => {
+          const selectedModel = modelOptions.find(model => model.id === models[index]);
+          const selectedProvider = selectedModel ? getProviderForModel(selectedModel.id) : null;
+
+          return (
+            <Card key={index} className="p-4">
+              <Select value={models[index]} onValueChange={(value) => handleModelChange(index, value)}>
+                <SelectTrigger className="w-full">
+                  <div className="flex items-center gap-2">
+                    {selectedProvider && (
+                      <Image
+                        src={selectedProvider.avatar}
+                        alt={`${selectedProvider.nickname} avatar`}
+                        width={16}
+                        height={16}
+                        className="rounded-full"
+                      />
+                    )}
+                    <span>{selectedModel?.displayName}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {modelOptions.map((model) => {
+                    const provider = getProviderForModel(model.id);
+                    return (
+                      <SelectItem 
+                        key={model.id} 
+                        value={model.id}
+                        className="px-2"
+                        disabled={models.includes(model.id) && model.id !== models[index]}
+                      >
+                        <div className="flex items-center gap-2">
+                          {provider && (
+                            <Image
+                              src={provider.avatar}
+                              alt={`${provider.nickname} avatar`}
+                              width={16}
+                              height={16}
+                              className="rounded-full"
+                            />
+                          )}
+                          <span>{model.displayName}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

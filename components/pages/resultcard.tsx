@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { getAllModels, Model } from '@/config/models';
+import { getAllModels, Model, getProviderForModel } from '@/config/models';
+import Image from 'next/image';
 
 interface ResultCardProps {
   index: number;
@@ -27,24 +28,52 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(
       }
     }, [results[index]]);
 
+    const selectedModel = modelOptions.find(model => model.id === models[index]);
+    const selectedProvider = selectedModel ? getProviderForModel(selectedModel.id) : null;
+
     return (
       <Card className={cn('flex flex-col h-full max-h-[calc(100vh-300px)]', 'transition-all duration-200')}>
         <CardHeader className="flex items-center justify-between p-2">
           <Select value={models[index]} onValueChange={(value) => handleModelChange(index, value)}>
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <div className="flex items-center gap-2">
+                {selectedProvider && (
+                  <Image
+                    src={selectedProvider.avatar}
+                    alt={`${selectedProvider.nickname} avatar`}
+                    width={16}
+                    height={16}
+                    className="rounded-full"
+                  />
+                )}
+                <span>{selectedModel?.displayName}</span>
+              </div>
             </SelectTrigger>
             <SelectContent>
-              {modelOptions.map((model) => (
-                <SelectItem 
-                  key={model.id} 
-                  value={model.id} 
-                  className="px-2"
-                  disabled={models.includes(model.id) && model.id !== models[index]}
-                >
-                  {model.displayName}
-                </SelectItem>
-              ))}
+              {modelOptions.map((model) => {
+                const provider = getProviderForModel(model.id);
+                return (
+                  <SelectItem 
+                    key={model.id} 
+                    value={model.id} 
+                    className="px-2"
+                    disabled={models.includes(model.id) && model.id !== models[index]}
+                  >
+                    <div className="flex items-center gap-2">
+                      {provider && (
+                        <Image
+                          src={provider.avatar}
+                          alt={`${provider.nickname} avatar`}
+                          width={16}
+                          height={16}
+                          className="rounded-full"
+                        />
+                      )}
+                      <span>{model.displayName}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </CardHeader>
