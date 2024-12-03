@@ -33,7 +33,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(
     const selectedProvider = selectedModel ? getProviderForModel(selectedModel.id) : null;
 
     return (
-      <Card className={cn('flex flex-col h-full max-h-[calc(100vh-300px)]', 'transition-all duration-200')}>
+      <Card className="flex flex-col h-full">
         <CardHeader className="flex items-center justify-between p-2">
           <Select value={models[index]} onValueChange={(value) => handleModelChange(index, value)}>
             <SelectTrigger className="w-full">

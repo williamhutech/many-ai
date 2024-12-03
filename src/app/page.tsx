@@ -135,14 +135,15 @@ const Header = ({ mode, onModeChange }: { mode: 'fast' | 'smart', onModeChange: 
           </SelectContent>
         </Select>
         <div className="hidden sm:block">
-          <Button variant="outline" size="xs" className="text-xs group">
+          <Button variant="outline" size="xs" className="text-xs group relative">
             v2.0
-            <div className="absolute top-full left-0 mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
               <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
               <ul className="list-disc list-inside text-left">
-                <li>Added multi-model responses</li>
-                <li>Added Summarise, Compare, and Merge</li>
-                <li>Fixed: button errors</li>
+                <li>Brand new design</li>
+                <li>Redesigned mobile experience</li>
+                <li>Offers both single-model and multi-model</li>
+                <li>Offers fast and smart models</li>
               </ul>
             </div>
           </Button>
@@ -655,7 +656,7 @@ export default function SDKPlayground() {
                       />
                     ))}
                   </div>
-                  <div className="sm:hidden w-full h-[calc(100vh-400px)]">
+                  <div className="sm:hidden w-full h-[calc(100vh-380px)]">
                     <MobileResultCarousel
                       models={models}
                       results={conversation.results}

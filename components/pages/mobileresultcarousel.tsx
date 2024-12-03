@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import ResultCard from './resultcard';
 import FusionResult from './fusionresult';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 
 interface MobileResultCarouselProps {
   models: string[];
@@ -66,7 +69,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
 
   return (
     <div className="relative w-full h-full flex flex-col">
-      <div className="flex-1 overflow-hidden relative">
+      <div className="absolute inset-0 bottom-8">
         <AnimatePresence initial={false} custom={direction} mode="sync">
           <motion.div
             key={currentIndex}
@@ -83,30 +86,36 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.3}
             onDragEnd={handleDragEnd}
-            className="absolute inset-0"
+            className="absolute inset-0 px-2"
           >
-            {currentIndex === 0 && (activeButton || fusionResult) ? (
-              <div className="h-full px-2 pb-12">
-                <FusionResult
-                  result={fusionResult}
-                  isLoading={isFusionLoading}
-                  models={models}
-                />
-              </div>
-            ) : (
-              <div className="h-full px-2 pb-12">
-                <ResultCard
-                  index={currentIndex - ((activeButton || fusionResult) ? 1 : 0)}
-                  models={models}
-                  results={results}
-                  handleModelChange={handleModelChange}
-                />
-              </div>
-            )}
+            <div className="h-full">
+              {currentIndex === 0 ? (
+                <div className="h-full">
+                  <Card className="flex flex-col h-full">
+                    <CardContent className="flex-1 p-4 overflow-y-auto">
+                      <Textarea
+                        value={fusionResult}
+                        className="w-full h-full text-xs-custom resize-none border-0 focus:ring-0"
+                        style={{ minHeight: '100%' }}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="h-full">
+                  <ResultCard
+                    index={currentIndex - 1}
+                    models={models}
+                    results={results}
+                    handleModelChange={handleModelChange}
+                  />
+                </div>
+              )}
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
-      <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+      <div className="absolute bottom-0 left-0 right-0 h-6 flex items-center justify-center">
         <div className="bg-zinc-200 h-1 rounded-full w-48 overflow-hidden">
           <motion.div
             className="bg-zinc-800 h-full rounded-full"

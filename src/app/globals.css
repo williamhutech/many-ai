@@ -100,6 +100,11 @@ footer {
 @media screen and (max-width: 768px) {
   footer {
     padding: 0.25rem 0.5rem;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.25rem);
+  }
+  
+  .mobile-carousel-container {
+    margin-bottom: 0.25rem;
   }
 }
 

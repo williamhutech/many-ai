@@ -21,6 +21,10 @@ export default function RootLayout({
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
         />
+        <link rel="preload" as="image" href="/avatars/claude.png" />
+        <link rel="preload" as="image" href="/avatars/chatgpt.png" />
+        <link rel="preload" as="image" href="/avatars/gemini.png" />
+        <link rel="preload" as="image" href="/avatars/llama.png" />
       </head>
       <body className="antialiased">
         {children}
