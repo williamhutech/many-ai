@@ -10,6 +10,7 @@ import { getProviderForModel } from '@/config/models';
 import { InitialModelSelection, StreamingStatus, ResultCard, FusionResult } from '@/components/pages';
 import Image from 'next/image';
 import { getDefaultModels } from '@/config/models';
+import MobileResultCarousel from '@/components/pages/mobileresultcarousel';
 
 const Header = ({ mode, onModeChange }: { mode: 'fast' | 'smart', onModeChange: (mode: 'fast' | 'smart') => void }) => {
   const [mounted, setMounted] = useState(false);
@@ -643,7 +644,7 @@ export default function SDKPlayground() {
                     </div>
                   </div>
                   {/* AI response cards */}
-                  <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="hidden sm:grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {models.map((_, modelIndex) => (
                       <ResultCard 
                         key={modelIndex} 
@@ -654,13 +655,25 @@ export default function SDKPlayground() {
                       />
                     ))}
                   </div>
-                  {(activeButton || fusionResult) && conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '') && (
-                    <FusionResult
-                      result={fusionResult}
-                      isLoading={isFusionLoading}
-                      ref={fusionResultRef}
+                  <div className="sm:hidden w-full h-[calc(100vh-400px)]">
+                    <MobileResultCarousel
                       models={models}
+                      results={conversation.results}
+                      handleModelChange={handleModelChange}
+                      fusionResult={fusionResult}
+                      isFusionLoading={isFusionLoading}
+                      activeButton={activeButton}
                     />
+                  </div>
+                  {(activeButton || fusionResult) && conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '') && (
+                    <div className="hidden sm:block">
+                      <FusionResult
+                        result={fusionResult}
+                        isLoading={isFusionLoading}
+                        ref={fusionResultRef}
+                        models={models}
+                      />
+                    </div>
                   )}
                 </div>
               ))}

@@ -22,11 +22,12 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(
       setModelOptions(getAllModels());
     }, []);
 
+    const currentResult = results[index];
     useEffect(() => {
       if (textareaRef.current) {
         textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
       }
-    }, [results[index]]);
+    }, [currentResult]);
 
     const selectedModel = modelOptions.find(model => model.id === models[index]);
     const selectedProvider = selectedModel ? getProviderForModel(selectedModel.id) : null;

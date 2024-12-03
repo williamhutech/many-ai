@@ -133,10 +133,10 @@ export const aiProviders: AIProvider[] = [
     avatar: '/avatars/llama.png',  // Add this line
     models: [
       {
-        id: 'llama-3.2-90b-text-preview',
+        id: 'llama-3.2-90b-vision-preview',
         displayName: 'Llama 3.2 [ULTRA Smart]',
         maxTokens: 2000,
-        enabled: true,
+        enabled: false,
         mode: 'smart',
         prePrompt: '',
       },
@@ -144,7 +144,7 @@ export const aiProviders: AIProvider[] = [
         id: 'llama-3.2-11b-vision-preview',
         displayName: 'Llama 3.2 [ULTRA FAST]',
         maxTokens: 2000,
-        enabled: true,
+        enabled: false,
         mode: 'fast',
         prePrompt: '',
       },

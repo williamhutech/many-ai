@@ -45,7 +45,8 @@
     "tailwindcss-animate": "^1.0.7",
     "tar": "^7.4.3",
     "together-ai": "^0.6.0-alpha.4",
-    "vercel": "^37.8.0"
+    "vercel": "^37.8.0",
+    "framer-motion": "^10.18.0"
   },
   "devDependencies": {
     "@types/node": "^20",
