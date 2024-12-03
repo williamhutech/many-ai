@@ -28,7 +28,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? '100%' : '-100%',
-      opacity: 0
+      opacity: 0.5
     }),
     center: {
       zIndex: 1,
@@ -38,12 +38,11 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
     exit: (direction: number) => ({
       zIndex: 0,
       x: direction < 0 ? '100%' : '-100%',
-      opacity: 0
+      opacity: 0.5
     })
   };
 
-  // Reduced threshold for more responsive swipes
-  const swipeConfidenceThreshold = 5000;
+  const swipeConfidenceThreshold = 1000;
   const swipePower = (offset: number, velocity: number) => {
     return Math.abs(offset) * velocity;
   };
@@ -67,8 +66,8 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
 
   return (
     <div className="relative w-full h-full flex flex-col">
-      <div className="flex-1 overflow-hidden">
-        <AnimatePresence initial={false} custom={direction} mode="wait">
+      <div className="flex-1 overflow-hidden relative">
+        <AnimatePresence initial={false} custom={direction} mode="sync">
           <motion.div
             key={currentIndex}
             custom={direction}
@@ -77,17 +76,17 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
             animate="center"
             exit="exit"
             transition={{
-              x: { type: "spring", stiffness: 400, damping: 30 },
-              opacity: { duration: 0.15 }
+              x: { type: "tween", duration: 0.15 },
+              opacity: { duration: 0.1 }
             }}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.7}
+            dragElastic={0.3}
             onDragEnd={handleDragEnd}
             className="absolute inset-0"
           >
             {currentIndex === 0 && (activeButton || fusionResult) ? (
-              <div className="h-full px-2">
+              <div className="h-full px-2 pb-12">
                 <FusionResult
                   result={fusionResult}
                   isLoading={isFusionLoading}
@@ -95,7 +94,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
                 />
               </div>
             ) : (
-              <div className="h-full px-2">
+              <div className="h-full px-2 pb-12">
                 <ResultCard
                   index={currentIndex - ((activeButton || fusionResult) ? 1 : 0)}
                   models={models}
@@ -107,15 +106,21 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
           </motion.div>
         </AnimatePresence>
       </div>
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-        {Array.from({ length: totalSlides }).map((_, index) => (
-          <div
-            key={index}
-            className={`w-2 h-2 rounded-full transition-colors duration-200 ${
-              index === currentIndex ? 'bg-zinc-800' : 'bg-zinc-300'
-            }`}
+      <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+        <div className="bg-zinc-200 h-1 rounded-full w-48 overflow-hidden">
+          <motion.div
+            className="bg-zinc-800 h-full rounded-full"
+            initial={false}
+            animate={{
+              width: `${100 / totalSlides}%`,
+              x: `${(100 * currentIndex)}%`
+            }}
+            transition={{
+              type: "tween",
+              duration: 0.15
+            }}
           />
-        ))}
+        </div>
       </div>
     </div>
   );

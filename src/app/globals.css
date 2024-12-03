@@ -91,9 +91,16 @@ footer {
   background: #fafafa;
   z-index: 50;
   min-height: var(--footer-height);
+  padding: 0.5rem 1rem;
   padding-bottom: env(safe-area-inset-bottom);
   transition: transform 0.2s ease-out;
   will-change: transform;
+}
+
+@media screen and (max-width: 768px) {
+  footer {
+    padding: 0.25rem 0.5rem;
+  }
 }
 
 .container {
