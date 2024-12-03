@@ -41,13 +41,13 @@ const FusionResult = forwardRef<HTMLDivElement, FusionResultProps>(
     const displayResult = replacePersonWithNickname(result);
 
     return (
-      <Card className="mt-6 w-full mb-48 bg-white" ref={ref}>
+      <Card className="mt-6 w-full bg-white" ref={ref}>
         <CardContent className="p-4">
           <Textarea
             ref={ref}
             value={displayResult}
             className="w-full text-xs-custom overflow-y-auto"
-            style={{ minHeight: '48px', maxHeight: '300px', resize: 'none' }}
+            style={{ minHeight: '48px', maxHeight: '300px', resize: 'none', overflowY: 'auto' }}
           />
         </CardContent>
       </Card>

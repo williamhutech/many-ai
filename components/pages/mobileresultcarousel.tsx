@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import ResultCard from './resultcard';
-import FusionResult from './fusionresult';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { getProviderForModel } from '@/config/models';
 
 interface MobileResultCarouselProps {
   models: string[];
@@ -27,6 +26,18 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   const [direction, setDirection] = useState(0);
 
   const totalSlides = (activeButton || fusionResult) ? models.length + 1 : models.length;
+
+  const replacePersonWithNickname = (text: string) => {
+    let modifiedText = text;
+    models.forEach((modelId, index) => {
+      const provider = getProviderForModel(modelId);
+      if (provider) {
+        const regexName = new RegExp(`${index === 0 ? 'Anny' : index === 1 ? 'Ben' : 'Clarice'}`, 'g');
+        modifiedText = modifiedText.replace(regexName, provider.nickname);
+      }
+    });
+    return modifiedText;
+  };
 
   const slideVariants = {
     enter: (direction: number) => ({
@@ -68,8 +79,8 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col">
-      <div className="absolute inset-0 bottom-8">
+    <div className="relative w-full h-full flex flex-col z-0">
+      <div className="absolute inset-0 bottom-8 z-0">
         <AnimatePresence initial={false} custom={direction} mode="sync">
           <motion.div
             key={currentIndex}
@@ -89,12 +100,12 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
             className="absolute inset-0 px-2"
           >
             <div className="h-full">
-              {currentIndex === 0 ? (
+              {currentIndex === 0 && (activeButton || fusionResult) ? (
                 <div className="h-full">
                   <Card className="flex flex-col h-full">
                     <CardContent className="flex-1 p-4 overflow-y-auto">
                       <Textarea
-                        value={fusionResult}
+                        value={replacePersonWithNickname(fusionResult)}
                         className="w-full h-full text-xs-custom resize-none border-0 focus:ring-0"
                         style={{ minHeight: '100%' }}
                       />
@@ -104,7 +115,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
               ) : (
                 <div className="h-full">
                   <ResultCard
-                    index={currentIndex - 1}
+                    index={currentIndex - (activeButton || fusionResult ? 1 : 0)}
                     models={models}
                     results={results}
                     handleModelChange={handleModelChange}

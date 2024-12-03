@@ -82,6 +82,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(
           <Textarea
             value={results[index]}
             className="h-full w-full text-xs-custom"
+            style={{ maxHeight: '300px', overflowY: 'auto' }}
             aria-placeholder="Response will appear here..."
           />
         </CardContent>

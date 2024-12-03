@@ -79,7 +79,7 @@ const Header = ({ mode, onModeChange }: { mode: 'fast' | 'smart', onModeChange: 
   };
 
   return (
-    <header className="bg-white px-4 sm:px-10 py-4 flex flex-wrap justify-between items-center gap-4 fixed top-0 left-0 right-0">
+    <header className="bg-white px-4 sm:px-10 py-4 flex flex-wrap justify-between items-center gap-4 fixed top-0 left-0 right-0 z-50">
       <div className="flex space-x-3">
         <Button
           variant="outline"
@@ -438,7 +438,12 @@ export default function SDKPlayground() {
   };
 
   useEffect(() => {
-    if (latestConversationRef.current) {
+    if (latestConversationRef.current && window.innerWidth <= 768) {
+      latestConversationRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'  // This will ensure the conversation starts at the top
+      });
+    } else if (latestConversationRef.current) {
       latestConversationRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [conversations]);
@@ -622,7 +627,7 @@ export default function SDKPlayground() {
         "flex-1 w-full overflow-y-auto", // Remove pb-48 as we're using padding-bottom in CSS
         isInitialState ? "flex items-center justify-center" : ""
       )}>
-        <div className="container mx-auto p-6 pb-[var(--footer-height)]">
+        <div className="container mx-auto p-6">
           {(isInitialState || isDismissing) ? (
             <div className={cn(
               "transition-opacity duration-500",
@@ -656,7 +661,7 @@ export default function SDKPlayground() {
                       />
                     ))}
                   </div>
-                  <div className="sm:hidden w-full h-[calc(100vh-380px)]">
+                  <div className="sm:hidden w-full h-[calc(100vh-380px)] relative z-0">
                     <MobileResultCarousel
                       models={models}
                       results={conversation.results}
