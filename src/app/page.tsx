@@ -441,8 +441,10 @@ export default function SDKPlayground() {
     if (latestConversationRef.current && window.innerWidth <= 768) {
       latestConversationRef.current.scrollIntoView({ 
         behavior: 'smooth',
-        block: 'start'  // This will ensure the conversation starts at the top
+        block: 'start'
       });
+      const headerHeight = document.querySelector('header')?.offsetHeight ?? 0;
+      window.scrollBy(0, -headerHeight); // Adjust scroll position by header height
     } else if (latestConversationRef.current) {
       latestConversationRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -620,11 +622,11 @@ export default function SDKPlayground() {
 
   // Render the user interface with header, main content, and footer
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col min-h-screen">
       <Header mode={mode} onModeChange={handleModeChange} />
       {/* Main content area with conversation history and result cards */}
       <main className={cn(
-        "flex-1 w-full overflow-y-auto", // Remove pb-48 as we're using padding-bottom in CSS
+        "flex-1 w-full overflow-y-auto",
         isInitialState ? "flex items-center justify-center" : ""
       )}>
         <div className="container mx-auto p-6">

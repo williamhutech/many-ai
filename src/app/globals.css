@@ -75,12 +75,10 @@ html, body, #__next {
 }
 
 main {
-  flex: 1;
+  margin-top: var(--header-height);
+  margin-bottom: var(--footer-height);
   overflow-y: auto;
-  padding-top: calc(var(--header-height) + 10px);
-  padding-bottom: calc(var(--footer-height) + 10px);
-  max-height: 100vh;
-  height: 100vh;
+  height: calc(100vh - var(--header-height) - var(--footer-height));
 }
 
 footer {
@@ -88,13 +86,9 @@ footer {
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fafafa;
+  height: var(--footer-height);
   z-index: 50;
-  min-height: var(--footer-height);
-  padding: 0.5rem 1rem;
-  padding-bottom: env(safe-area-inset-bottom);
-  transition: transform 0.2s ease-out;
-  will-change: transform;
+  background: #fafafa;
 }
 
 @media screen and (max-width: 768px) {
@@ -180,7 +174,7 @@ body {
 
 @media screen and (max-width: 768px) {
   main {
-    padding-top: var(--header-height);
+    padding-top: calc(var(--header-height) + 10px);
     height: calc(100vh - var(--header-height) - var(--footer-height));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -208,9 +202,20 @@ body {
     right: 0;
     z-index: 50;
     background: white;
+    height: var(--header-height);
   }
 }
 
 .space-y-4 {
   margin-bottom: 0;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-height);
+  z-index: 50;
+  background: white;
 }
