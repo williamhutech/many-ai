@@ -34,6 +34,7 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
         if (textarea.value.trim() && !textarea.value.includes('\n')) {
           e.preventDefault();
           onSubmit && onSubmit(e);
+          textarea.blur();
         }
       }
     };

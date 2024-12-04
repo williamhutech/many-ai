@@ -444,7 +444,7 @@ export default function SDKPlayground() {
         block: 'start'
       });
       const headerHeight = document.querySelector('header')?.offsetHeight ?? 0;
-      window.scrollBy(0, -headerHeight); // Adjust scroll position by header height
+      window.scrollBy(0, -headerHeight - 10); // Adjust scroll position by header height
     } else if (latestConversationRef.current) {
       latestConversationRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -659,7 +659,7 @@ export default function SDKPlayground() {
                         index={modelIndex} 
                         models={models} 
                         results={conversation.results} 
-                        handleModelChange={handleModelChange} 
+                        isStreaming={isStreaming}
                       />
                     ))}
                   </div>
@@ -667,7 +667,6 @@ export default function SDKPlayground() {
                     <MobileResultCarousel
                       models={models}
                       results={conversation.results}
-                      handleModelChange={handleModelChange}
                       fusionResult={fusionResult}
                       isFusionLoading={isFusionLoading}
                       activeButton={activeButton}

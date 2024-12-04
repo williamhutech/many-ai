@@ -1,88 +1,63 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import React, { useEffect, useRef } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { getAllModels, Model, getProviderForModel } from '@/config/models';
+import { getProviderForModel } from '@/config/models';
 import Image from 'next/image';
 
 interface ResultCardProps {
   index: number;
   models: string[];
   results: string[];
-  handleModelChange: (index: number, value: string) => void;
+  isStreaming?: boolean;
 }
 
 const ResultCard: React.FC<ResultCardProps> = React.memo(
-  ({ index, models, results, handleModelChange }) => {
-    const [modelOptions, setModelOptions] = useState<Model[]>([]);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-    useEffect(() => {
-      setModelOptions(getAllModels());
-    }, []);
-
+  ({ index, models, results, isStreaming }) => {
+    const textareaRef = useRef<HTMLDivElement>(null);
     const currentResult = results[index];
+    
     useEffect(() => {
-      if (textareaRef.current) {
-        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+      if (textareaRef.current && currentResult) {
+        textareaRef.current.scrollTop = 0;
       }
     }, [currentResult]);
 
-    const selectedModel = modelOptions.find(model => model.id === models[index]);
-    const selectedProvider = selectedModel ? getProviderForModel(selectedModel.id) : null;
+    const selectedModel = models[index];
+    const selectedProvider = getProviderForModel(selectedModel);
 
     return (
       <Card className="flex flex-col h-full">
-        <CardHeader className="flex items-center justify-between p-2">
-          <Select value={models[index]} onValueChange={(value) => handleModelChange(index, value)}>
-            <SelectTrigger className="w-full">
-              <div className="flex items-center gap-2">
-                {selectedProvider && (
-                  <Image
-                    src={selectedProvider.avatar}
-                    alt={`${selectedProvider.nickname} avatar`}
-                    width={16}
-                    height={16}
-                    className="rounded-full"
-                  />
-                )}
-                <span>{selectedModel?.displayName}</span>
+        <div className="flex items-center gap-3 p-5 pb-0">
+          {selectedProvider && (
+            <Image
+              src={selectedProvider.avatar}
+              alt={`${selectedProvider.nickname} avatar`}
+              width={32}
+              height={32}
+              className="rounded-full border border-zinc-150"
+              style={{ marginLeft: '8px' }}
+            />
+          )}
+          <span className="text-sm font-semibold">{selectedProvider?.nickname}</span>
+        </div>
+        <CardContent className="flex-1 overflow-y-auto p-5 pt-1 relative">
+          {isStreaming && !currentResult && (
+            <div className="absolute inset-0 bg-white">
+              <div className="animate-pulse space-y-2 p-4">
+                {/* First paragraph */}
+                <div className="space-y-2">
+                  <div className="h-4 bg-zinc-100 rounded w-[100%]"></div>
+                  <div className="h-4 bg-zinc-100 rounded w-[100%]"></div>
+                  <div className="h-4 bg-zinc-100 rounded w-[95%]"></div>
+                </div>
               </div>
-            </SelectTrigger>
-            <SelectContent>
-              {modelOptions.map((model) => {
-                const provider = getProviderForModel(model.id);
-                return (
-                  <SelectItem 
-                    key={model.id} 
-                    value={model.id} 
-                    className="px-2"
-                    disabled={models.includes(model.id) && model.id !== models[index]}
-                  >
-                    <div className="flex items-center gap-2">
-                      {provider && (
-                        <Image
-                          src={provider.avatar}
-                          alt={`${provider.nickname} avatar`}
-                          width={16}
-                          height={16}
-                          className="rounded-full"
-                        />
-                      )}
-                      <span>{model.displayName}</span>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </CardHeader>
-        <CardContent className="p-4 pt-0 flex-1 overflow-y-auto">
+            </div>
+          )}
           <Textarea
-            value={results[index]}
-            className="h-full w-full text-xs-custom"
-            style={{ maxHeight: '300px', overflowY: 'auto' }}
+            ref={textareaRef}
+            value={currentResult}
+            className="w-full text-sm text-gray-700"
+            style={{ maxHeight: '300px', overflowY: 'auto', resize: 'none' }}
             aria-placeholder="Response will appear here..."
           />
         </CardContent>

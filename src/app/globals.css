@@ -89,6 +89,7 @@ footer {
   height: var(--footer-height);
   z-index: 50;
   background: #fafafa;
+  overflow: hidden;
 }
 
 @media screen and (max-width: 768px) {
@@ -218,4 +219,25 @@ header {
   height: var(--header-height);
   z-index: 50;
   background: white;
+}
+
+.animation-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animation-delay-400 {
+  animation-delay: 400ms;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
 }

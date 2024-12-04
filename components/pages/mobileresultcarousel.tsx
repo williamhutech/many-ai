@@ -4,11 +4,11 @@ import ResultCard from './resultcard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { getProviderForModel } from '@/config/models';
+import Image from 'next/image';
 
 interface MobileResultCarouselProps {
   models: string[];
   results: string[];
-  handleModelChange: (index: number, value: string) => void;
   fusionResult: string;
   isFusionLoading: boolean;
   activeButton: string | null;
@@ -17,13 +17,13 @@ interface MobileResultCarouselProps {
 const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   models,
   results,
-  handleModelChange,
   fusionResult,
   isFusionLoading,
   activeButton,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const totalSlides = (activeButton || fusionResult) ? models.length + 1 : models.length;
 
@@ -38,6 +38,20 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
     });
     return modifiedText;
   };
+
+  const SkeletonLoader = () => (
+    <div className="animate-pulse space-y-2 p-4">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-8 h-8 bg-zinc-100 rounded-full"></div>
+        <div className="h-4 bg-zinc-100 rounded w-20"></div>
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 bg-zinc-100 rounded w-full"></div>
+        <div className="h-4 bg-zinc-100 rounded w-full"></div>
+        <div className="h-4 bg-zinc-100 rounded w-[100%]"></div>
+      </div>
+    </div>
+  );
 
   const slideVariants = {
     enter: (direction: number) => ({
@@ -101,26 +115,35 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
           >
             <div className="h-full">
               {currentIndex === 0 && (activeButton || fusionResult) ? (
-                <div className="h-full">
-                  <Card className="flex flex-col h-full">
-                    <CardContent className="flex-1 p-4 overflow-y-auto">
-                      <Textarea
-                        value={replacePersonWithNickname(fusionResult)}
-                        className="w-full h-full text-xs-custom resize-none border-0 focus:ring-0"
-                        style={{ minHeight: '100%' }}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
+                <Card className="flex flex-col h-full p-5">
+                  {!imageLoaded && <SkeletonLoader />}
+                  <div className={`flex items-center gap-3 mb-2 ${!imageLoaded ? 'invisible' : ''}`}>
+                    <Image
+                      src="/avatars/manyai.png"
+                      alt="ManyAI avatar"
+                      width={32}
+                      height={32}
+                      className="rounded-full border border-zinc-150"
+                      onLoad={() => setImageLoaded(true)}
+                      priority
+                    />
+                    <span className="text-sm font-semibold">ManyAI</span>
+                  </div>
+                  <CardContent className="flex-1 overflow-y-auto p-0">
+                    <Textarea
+                      value={replacePersonWithNickname(fusionResult)}
+                      className="w-full text-xs text-gray-700"
+                      style={{ maxHeight: '300px', overflowY: 'auto', resize: 'none' }}
+                    />
+                  </CardContent>
+                </Card>
               ) : (
-                <div className="h-full">
-                  <ResultCard
-                    index={currentIndex - (activeButton || fusionResult ? 1 : 0)}
-                    models={models}
-                    results={results}
-                    handleModelChange={handleModelChange}
-                  />
-                </div>
+                <ResultCard
+                  index={currentIndex - (activeButton || fusionResult ? 1 : 0)}
+                  models={models}
+                  results={results}
+                  isStreaming={true}
+                />
               )}
             </div>
           </motion.div>
