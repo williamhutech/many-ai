@@ -182,7 +182,11 @@ export default function SDKPlayground() {
 
   // Initialize state variables
   const [input, setInput] = useState('');
-  const [conversations, setConversations] = useState<Array<{ prompt: string; results: string[] }>>([]);
+  const [conversations, setConversations] = useState<Array<{ 
+    prompt: string; 
+    results: string[]; 
+    fusionResult: string; 
+  }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [conversationHistories, setConversationHistories] = useState<{ [modelId: string]: Array<{ role: string; content: string }> }>({});
@@ -199,7 +203,6 @@ export default function SDKPlayground() {
   const [isMergeEnabled, setIsMergeEnabled] = useState(false);  // Changed from isHighlightEnabled
   const [isSuggestMoreEnabled, setIsSuggestMoreEnabled] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
-  const [fusionResult, setFusionResult] = useState<string>('');
   const [isFusionLoading, setIsFusionLoading] = useState(false);
   const fusionResultRef = useRef<HTMLDivElement>(null);
   const [isSummariseEnabled, setIsSummariseEnabled] = useState(false);
@@ -264,9 +267,10 @@ export default function SDKPlayground() {
     setIsInitialFooter(false);
     if (!sessionId) return;
     setIsLoading(true);
-    setIsStreaming(true); // Add this line to show streaming status immediately
+    setIsStreaming(true);
     const currentInput = input;
     setInput('');
+    // Reset fusion result for new prompt
 
     // Reset input box height
     if (inputRef.current) {
@@ -296,8 +300,11 @@ export default function SDKPlayground() {
 
     // Add new conversation entry
     setConversations(prev => {
-      const newConversations = [...prev, { prompt: currentInput, results: ['', '', ''] }];
-      console.log('New conversation added:', newConversations);
+      const newConversations = [...prev, { 
+        prompt: currentInput, 
+        results: ['', '', ''], 
+        fusionResult: '' 
+      }];
       return newConversations;
     });
 
@@ -423,16 +430,16 @@ export default function SDKPlayground() {
     setConversationHistories(updatedConversationHistories);
     console.log('Final updated conversation histories:', updatedConversationHistories);
 
-    // Check if a fusion button is active and trigger fusion
-    if (activeButton && responses.every(response => response !== '')) {
-      console.log('Triggering fusion with active button:', activeButton);
-      await handleFusion(activeButton, true, updatedConversationHistories);
-    }
-
-    // Check if Multi-Model Response is active and trigger fusion
-    if (isMultiModelResponseEnabled && responses.every(response => response !== '')) {
-      console.log('Triggering Multi-Model Response fusion');
-      await handleFusion('Multi-Model Response', true, updatedConversationHistories);
+    // Check if a fusion button is active or Multi-Model Response is enabled
+    if (responses.every(response => response !== '')) {
+      console.log('Checking fusion conditions...');
+      if (activeButton) {
+        console.log('Triggering fusion with active button:', activeButton);
+        await handleFusion(activeButton, true, updatedConversationHistories);
+      } else if (isMultiModelResponseEnabled) {
+        console.log('Triggering Multi-Model Response fusion');
+        await handleFusion('Multi-Model Response', true, updatedConversationHistories);
+      }
     }
 
     setIsLoading(false);
@@ -461,7 +468,7 @@ export default function SDKPlayground() {
     if (fusionResultRef.current) {
       fusionResultRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-  }, [fusionResult]);
+  }, []);
 
   // Update isStreaming state when streamingModels changes
   useEffect(() => {
@@ -520,13 +527,25 @@ export default function SDKPlayground() {
     if (!autoCall) {
       setIsFusionLoading(true);
     }
-    setFusionResult(''); // Clear previous fusion result immediately
+    
+    // Clear previous fusion result
+    setConversations(prev => {
+      const newConversations = [...prev];
+      const currentConversation = newConversations[newConversations.length - 1];
+      currentConversation.fusionResult = '';
+      return newConversations;
+    });
 
     const historiesForFusion = latestConversationHistories || conversationHistories;
 
     if (Object.keys(historiesForFusion).length === 0) {
       console.error('No conversation histories available for fusion');
-      setFusionResult('Error: No conversation histories available for fusion');
+      setConversations(prev => {
+        const newConversations = [...prev];
+        const currentConversation = newConversations[newConversations.length - 1];
+        currentConversation.fusionResult = 'Error: No conversation histories available for fusion';
+        return newConversations;
+      });
       setIsFusionLoading(false);
       return;
     }
@@ -572,21 +591,31 @@ export default function SDKPlayground() {
       const decoder = new TextDecoder();
 
       if (reader) {
+        let accumulatedContent = '';
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
-            setIsFusionLoading(false); // Set loading to false when stream is complete
+            setIsFusionLoading(false);
             break;
           }
 
           const chunk = decoder.decode(value);
           const lines = chunk.split('\n');
+          
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(5));
                 if (data.content) {
-                  setFusionResult(prev => prev + data.content);
+                  accumulatedContent += data.content;
+                  
+                  setConversations(prev => {
+                    const newConversations = [...prev];
+                    const currentConversation = newConversations[newConversations.length - 1];
+                    currentConversation.fusionResult = accumulatedContent;
+                    return newConversations;
+                  });
                 }
               } catch (error) {
                 console.error('Error parsing JSON:', error);
@@ -597,8 +626,13 @@ export default function SDKPlayground() {
       }
     } catch (error) {
       console.error('Error in Fusion:', error);
-      setFusionResult('Error generating Fusion response');
-      setIsFusionLoading(false); // Set loading to false on error
+      setConversations(prev => {
+        const newConversations = [...prev];
+        const currentConversation = newConversations[newConversations.length - 1];
+        currentConversation.fusionResult = 'Error generating Fusion response';
+        return newConversations;
+      });
+      setIsFusionLoading(false);
     } finally {
       if (fusionResultRef.current) {
         fusionResultRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -661,7 +695,7 @@ export default function SDKPlayground() {
                         models={models}
                         results={conversation.results}
                         isFusionCard={true}
-                        fusionResult={fusionResult}
+                        fusionResult={conversation.fusionResult}
                         isFusionLoading={isFusionLoading}
                       />
                       <button
@@ -725,7 +759,7 @@ export default function SDKPlayground() {
                     <MobileResultCarousel
                       models={models}
                       results={conversation.results}
-                      fusionResult={fusionResult}
+                      fusionResult={conversation.fusionResult}
                       isFusionLoading={isFusionLoading}
                       activeButton={activeButton}
                     />

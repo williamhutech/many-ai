@@ -131,10 +131,20 @@ export async function POST(req: Request) {
 
       // Initialize the model stream dynamically
       if (provider.clientName === 'anthropic') {
+        // Convert history to Anthropic's expected format
+        const anthropicMessages = history.map((msg: { role: string; content: string }) => {
+          if (msg.role === 'user') {
+            return { role: 'user', content: msg.content };
+          } else {
+            return { role: 'assistant', content: msg.content };
+          }
+        });
+
         modelStream = await (client as Anthropic).messages.stream({
           model: model.id,
           max_tokens: model.maxTokens,
-          messages: history.map((msg: { role: string; content: string }) => ({ role: msg.role, content: msg.content })),
+          system: "You are a helpful AI assistant. Maintain context of the conversation and reference previous exchanges when relevant.",
+          messages: anthropicMessages,
         });
 
         for await (const event of modelStream) {
