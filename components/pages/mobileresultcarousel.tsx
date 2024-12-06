@@ -23,7 +23,6 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   const totalSlides = (activeButton || fusionResult) ? models.length + 1 : models.length;
 
@@ -39,16 +38,12 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
     return modifiedText;
   };
 
-  const SkeletonLoader = () => (
+  const ContentSkeletonLoader = () => (
     <div className="animate-pulse space-y-2 p-4">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-8 h-8 bg-zinc-100 rounded-full"></div>
-        <div className="h-4 bg-zinc-100 rounded w-20"></div>
-      </div>
       <div className="space-y-2">
-        <div className="h-4 bg-zinc-100 rounded w-full"></div>
-        <div className="h-4 bg-zinc-100 rounded w-full"></div>
         <div className="h-4 bg-zinc-100 rounded w-[100%]"></div>
+        <div className="h-4 bg-zinc-100 rounded w-[100%]"></div>
+        <div className="h-4 bg-zinc-100 rounded w-[95%]"></div>
       </div>
     </div>
   );
@@ -114,32 +109,18 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
             className="absolute inset-0 px-2"
           >
             <div className="h-full">
-              {currentIndex === 0 && (activeButton || fusionResult) ? (
-                <Card className="flex flex-col h-full p-5">
-                  {!imageLoaded && <SkeletonLoader />}
-                  <div className={`flex items-center gap-3 mb-2 ${!imageLoaded ? 'invisible' : ''}`}>
-                    <Image
-                      src="/avatars/manyai.png"
-                      alt="ManyAI avatar"
-                      width={32}
-                      height={32}
-                      className="rounded-full border border-zinc-150"
-                      onLoad={() => setImageLoaded(true)}
-                      priority
-                    />
-                    <span className="text-sm font-semibold">ManyAI</span>
-                  </div>
-                  <CardContent className="flex-1 overflow-y-auto p-0">
-                    <Textarea
-                      value={replacePersonWithNickname(fusionResult)}
-                      className="w-full text-xs text-gray-700"
-                      style={{ maxHeight: '300px', overflowY: 'auto', resize: 'none' }}
-                    />
-                  </CardContent>
-                </Card>
+              {currentIndex === 0 ? (
+                <ResultCard
+                  index={models.length}
+                  models={models}
+                  results={results}
+                  isFusionCard={true}
+                  fusionResult={fusionResult}
+                  isFusionLoading={isFusionLoading}
+                />
               ) : (
                 <ResultCard
-                  index={currentIndex - (activeButton || fusionResult ? 1 : 0)}
+                  index={currentIndex - 1}
                   models={models}
                   results={results}
                   isStreaming={true}

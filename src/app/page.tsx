@@ -7,7 +7,7 @@ import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
 import { Button, Input, TruncatedText, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getProviderForModel } from '@/config/models';
-import { InitialModelSelection, StreamingStatus, ResultCard, FusionResult } from '@/components/pages';
+import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
 import Image from 'next/image';
 import { getDefaultModels } from '@/config/models';
 import MobileResultCarousel from '@/components/pages/mobileresultcarousel';
@@ -205,6 +205,7 @@ export default function SDKPlayground() {
   const [isSummariseEnabled, setIsSummariseEnabled] = useState(false);
   const [isMultiModelResponseEnabled, setIsMultiModelResponseEnabled] = useState(false);
   const [isFirstPrompt, setIsFirstPrompt] = useState(true);
+  const [showAllModels, setShowAllModels] = useState(true);
 
   // Initialize Amplitude when the component mounts
   useEffect(() => {
@@ -652,16 +653,73 @@ export default function SDKPlayground() {
                     </div>
                   </div>
                   {/* AI response cards */}
-                  <div className="hidden sm:grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                    {models.map((_, modelIndex) => (
-                      <ResultCard 
-                        key={modelIndex} 
-                        index={modelIndex} 
-                        models={models} 
-                        results={conversation.results} 
-                        isStreaming={isStreaming}
+                  <div className="hidden sm:flex flex-col gap-6">
+                    {/* ManyAI card with Show More/Less button */}
+                    <div className="relative">
+                      <ResultCard
+                        index={models.length}
+                        models={models}
+                        results={conversation.results}
+                        isFusionCard={true}
+                        fusionResult={fusionResult}
+                        isFusionLoading={isFusionLoading}
                       />
-                    ))}
+                      <button
+                        onClick={() => setShowAllModels(!showAllModels)}
+                        className="absolute top-5 right-5 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        {showAllModels ? (
+                          <>
+                            Show Less
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="m18 15-6-6-6 6"/>
+                            </svg>
+                          </>
+                        ) : (
+                          <>
+                            Show More
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    
+                    {/* Model cards - shared row */}
+                    {showAllModels && (
+                      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                        {models.map((_, modelIndex) => (
+                          <ResultCard 
+                            key={modelIndex} 
+                            index={modelIndex} 
+                            models={models} 
+                            results={conversation.results} 
+                            isStreaming={isStreaming}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="sm:hidden w-full h-[calc(100vh-380px)] relative z-0">
                     <MobileResultCarousel
@@ -672,16 +730,6 @@ export default function SDKPlayground() {
                       activeButton={activeButton}
                     />
                   </div>
-                  {(activeButton || fusionResult) && conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '') && (
-                    <div className="hidden sm:block">
-                      <FusionResult
-                        result={fusionResult}
-                        isLoading={isFusionLoading}
-                        ref={fusionResultRef}
-                        models={models}
-                      />
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
