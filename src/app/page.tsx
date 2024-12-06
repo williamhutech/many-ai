@@ -190,7 +190,6 @@ export default function SDKPlayground() {
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [conversationHistories, setConversationHistories] = useState<{ [modelId: string]: Array<{ role: string; content: string }> }>({});
-  const [showCopiedPopup, setShowCopiedPopup] = useState(false);
   const latestConversationRef = useRef<HTMLDivElement>(null);
   const [isInitialState, setIsInitialState] = useState(true);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -198,16 +197,9 @@ export default function SDKPlayground() {
   const [streamingModels, setStreamingModels] = useState<string[]>([]);
   const [isInitialFooter, setIsInitialFooter] = useState(true);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isConsolidateEnabled, setIsConsolidateEnabled] = useState(false);
-  const [isCompareEnabled, setIsCompareEnabled] = useState(false);
-  const [isMergeEnabled, setIsMergeEnabled] = useState(false);  // Changed from isHighlightEnabled
-  const [isSuggestMoreEnabled, setIsSuggestMoreEnabled] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
   const [isFusionLoading, setIsFusionLoading] = useState(false);
   const fusionResultRef = useRef<HTMLDivElement>(null);
-  const [isSummariseEnabled, setIsSummariseEnabled] = useState(false);
-  const [isMultiModelResponseEnabled, setIsMultiModelResponseEnabled] = useState(false);
-  const [isFirstPrompt, setIsFirstPrompt] = useState(true);
   const [showAllModels, setShowAllModels] = useState(true);
 
   // Initialize Amplitude when the component mounts
@@ -284,12 +276,6 @@ export default function SDKPlayground() {
         setIsDismissing(false);
       }, 250);
     }
-
-    // If it's the first prompt and Multi-Model Response is enabled
-    if (isFirstPrompt && isMultiModelResponseEnabled) {
-      setIsFusionLoading(true);
-    }
-    setIsFirstPrompt(false);
 
     // Track prompt submission event with active fusion feature
     amplitude.track('Prompt Submitted', {
@@ -409,14 +395,6 @@ export default function SDKPlayground() {
     // Fetch responses from all models simultaneously
     const responses = await Promise.all(models.map((_, index) => fetchModelResponse(index)));
 
-    // Update conversations with all responses
-    setConversations(prev => {
-      const newConversations = [...prev];
-      newConversations[newConversations.length - 1].results = responses.filter((response): response is string => response !== undefined);
-      console.log('Final updated conversations:', newConversations);
-      return newConversations;
-    });
-
     // Update conversation histories
     const updatedConversationHistories = { ...conversationHistories };
     models.forEach((modelId, index) => {
@@ -428,19 +406,17 @@ export default function SDKPlayground() {
       ];
     });
     setConversationHistories(updatedConversationHistories);
-    console.log('Final updated conversation histories:', updatedConversationHistories);
 
-    // Check if a fusion button is active or Multi-Model Response is enabled
-    if (responses.every(response => response !== '')) {
-      console.log('Checking fusion conditions...');
-      if (activeButton) {
-        console.log('Triggering fusion with active button:', activeButton);
-        await handleFusion(activeButton, true, updatedConversationHistories);
-      } else if (isMultiModelResponseEnabled) {
-        console.log('Triggering Multi-Model Response fusion');
-        await handleFusion('Multi-Model Response', true, updatedConversationHistories);
-      }
-    }
+    // Update conversations with all responses
+    setConversations(prev => {
+      const newConversations = [...prev];
+      newConversations[newConversations.length - 1].results = responses.filter((response): response is string => response !== undefined);
+      console.log('Final updated conversations:', newConversations);
+      return newConversations;
+    });
+
+    // Automatically trigger fusion after responses are loaded
+    handleFusion('Multi-Model Response', true, updatedConversationHistories);
 
     setIsLoading(false);
   };
@@ -476,49 +452,7 @@ export default function SDKPlayground() {
   }, [streamingModels]);
 
   const handleButtonClick = (buttonName: string) => {
-    let newState = false;
-    switch (buttonName) {
-      case 'Multi-Model Response':
-        newState = !isMultiModelResponseEnabled;
-        setIsMultiModelResponseEnabled(newState);
-        if (newState) {
-          setIsFusionLoading(false);  // Don't set loading until we have responses
-          setIsSummariseEnabled(false);
-          setIsCompareEnabled(false);
-          setIsMergeEnabled(false);
-        }
-        break;
-      case 'Summarise':
-        newState = !isSummariseEnabled;
-        setIsSummariseEnabled(newState);
-        if (newState) {
-          setIsFusionLoading(false);  // Don't set loading until we have responses
-          setIsMultiModelResponseEnabled(false);
-          setIsCompareEnabled(false);
-          setIsMergeEnabled(false);
-        }
-        break;
-      case 'Compare':
-        newState = !isCompareEnabled;
-        setIsCompareEnabled(newState);
-        if (newState) {
-          setIsFusionLoading(false);  // Don't set loading until we have responses
-          setIsMultiModelResponseEnabled(false);
-          setIsSummariseEnabled(false);
-          setIsMergeEnabled(false);
-        }
-        break;
-      case 'Merge':
-        newState = !isMergeEnabled;
-        setIsMergeEnabled(newState);
-        if (newState) {
-          setIsFusionLoading(false);  // Don't set loading until we have responses
-          setIsMultiModelResponseEnabled(false);
-          setIsSummariseEnabled(false);
-          setIsCompareEnabled(false);
-        }
-        break;
-    }
+    const newState = activeButton !== buttonName;
     setActiveButton(newState ? buttonName : null);
     localStorage.setItem(`is${buttonName.replace(/\s+/g, '')}Enabled`, newState.toString());
   };
@@ -640,21 +574,6 @@ export default function SDKPlayground() {
     }
   };
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedMultiModelResponse = localStorage.getItem('isMultiModelResponseEnabled');
-      setIsMultiModelResponseEnabled(storedMultiModelResponse === null ? true : storedMultiModelResponse === 'true');
-      setIsSummariseEnabled(localStorage.getItem('isSummariseEnabled') === 'true');
-      setIsCompareEnabled(localStorage.getItem('isCompareEnabled') === 'true');
-      setIsMergeEnabled(localStorage.getItem('isMergeEnabled') === 'true');
-      
-      // Set the active button if Multi-Model Response is enabled by default
-      if (storedMultiModelResponse === null) {
-        setActiveButton('Multi-Model Response');
-      }
-    }
-  }, []);
-
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
@@ -688,7 +607,7 @@ export default function SDKPlayground() {
                   </div>
                   {/* AI response cards */}
                   <div className="hidden sm:flex flex-col gap-6">
-                    {/* ManyAI card with Show More/Less button */}
+                    {/* ManyAI card */}
                     <div className="relative">
                       <ResultCard
                         index={models.length}

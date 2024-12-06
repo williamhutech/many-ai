@@ -24,7 +24,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
 
-  const totalSlides = (activeButton || fusionResult) ? models.length + 1 : models.length;
+  const totalSlides = models.length + 1;
 
   const replacePersonWithNickname = (text: string) => {
     let modifiedText = text;

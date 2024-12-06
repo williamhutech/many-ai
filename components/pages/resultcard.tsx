@@ -86,7 +86,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(
           )}
         </div>
         <CardContent className="flex-1 overflow-y-auto p-5 pt-1 relative">
-          {(isStreaming && !currentResult) || (isFusionCard && isFusionLoading) ? (
+          {(isStreaming && !currentResult && !isFusionCard) || (isFusionCard && (isFusionLoading || !currentResult)) ? (
             <ContentSkeletonLoader />
           ) : (
             <Textarea
