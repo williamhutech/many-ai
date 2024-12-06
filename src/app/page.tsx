@@ -12,7 +12,11 @@ import Image from 'next/image';
 import { getDefaultModels } from '@/config/models';
 import MobileResultCarousel from '@/components/pages/mobileresultcarousel';
 
-const Header = ({ mode, onModeChange }: { mode: 'fast' | 'smart', onModeChange: (mode: 'fast' | 'smart') => void }) => {
+const Header = ({ mode, onModeChange, onNewChat }: { 
+  mode: 'fast' | 'smart', 
+  onModeChange: (mode: 'fast' | 'smart') => void,
+  onNewChat: () => void 
+}) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -106,7 +110,7 @@ const Header = ({ mode, onModeChange }: { mode: 'fast' | 'smart', onModeChange: 
           variant="outline"
           size="xs"
           className="text-xs"
-          onClick={() => window.location.reload()}
+          onClick={onNewChat}
         >
           + New Chat
         </Button>
@@ -574,10 +578,33 @@ export default function SDKPlayground() {
     }
   };
 
+  const handleNewChat = () => {
+    // Clear all conversations and histories
+    setConversations([]);
+    setConversationHistories({});
+    setIsInitialState(true);
+    setIsInitialFooter(true);
+    setStreamingModels([]);
+    setIsStreaming(false);
+    setIsFusionLoading(false);
+    setInput('');
+    
+    // Generate new session ID
+    const newSessionId = crypto.randomUUID();
+    setSessionId(newSessionId);
+    
+    // Track new chat event
+    amplitude.track('New Chat Started');
+  };
+
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
-      <Header mode={mode} onModeChange={handleModeChange} />
+      <Header 
+        mode={mode} 
+        onModeChange={handleModeChange} 
+        onNewChat={handleNewChat}
+      />
       {/* Main content area with conversation history and result cards */}
       <main className={cn(
         "flex-1 w-full overflow-y-auto",

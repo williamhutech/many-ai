@@ -112,7 +112,14 @@ export async function POST(req: Request) {
   }
   // Retrieve conversation history for the selected model and filter out empty messages
   const history = (conversationHistories?.[selectedModel] || []).filter((msg: MessageParam) => msg.content.trim() !== '');
-  history.push({ role: 'user', content: prompt.trim() });
+
+  // If this is the first message and model has a prePrompt, add it to the prompt
+  const finalPrompt = history.length === 0 && model.prePrompt 
+    ? `${model.prePrompt}\n\n${prompt.trim()}`
+    : prompt.trim();
+
+  // Add the user's message to history
+  history.push({ role: 'user', content: finalPrompt });
 
   // Set up streaming response
   const encoder = new TextEncoder();
@@ -131,28 +138,31 @@ export async function POST(req: Request) {
 
       // Initialize the model stream dynamically
       if (provider.clientName === 'anthropic') {
-        // Convert history to Anthropic's expected format
-        const anthropicMessages = history.map((msg: { role: string; content: string }) => {
-          if (msg.role === 'user') {
-            return { role: 'user', content: msg.content };
-          } else {
-            return { role: 'assistant', content: msg.content };
-          }
-        });
+        // Convert history to Anthropic's expected format and ensure proper message structure
+        const anthropicMessages = history.map((msg: { role: string; content: string }) => ({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        }));
 
+        // Create the stream with proper message history
         modelStream = await (client as Anthropic).messages.stream({
           model: model.id,
           max_tokens: model.maxTokens,
-          system: "You are a helpful AI assistant. Maintain context of the conversation and reference previous exchanges when relevant.",
           messages: anthropicMessages,
+          system: "You are a helpful AI assistant. Maintain context of the conversation and reference previous exchanges when relevant."
         });
 
+        // After getting the response, add it to history
+        let fullResponse = '';
         for await (const event of modelStream) {
           if ('delta' in event && 'text' in event.delta) {
-            modelResponse += event.delta.text;
+            fullResponse += event.delta.text;
             await writeChunk(event.delta.text);
           }
         }
+        
+        // Add the assistant's response to history
+        history.push({ role: 'assistant', content: fullResponse });
       } else if (provider.clientName === 'openai') {
         modelStream = await (client as OpenAI).chat.completions.create({
           model: model.id,
