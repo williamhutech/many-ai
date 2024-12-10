@@ -140,13 +140,13 @@ const Header = ({ mode, onModeChange, onNewChat }: {
         </Select>
         <div className="hidden sm:block">
           <Button variant="outline" size="xs" className="text-xs group relative">
-            v2.0
+            v2.1
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
               <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
               <ul className="list-disc list-inside text-left">
                 <li>Brand new design</li>
                 <li>Redesigned mobile experience</li>
-                <li>Offers both single-model and multi-model</li>
+                <li>Offers vastly better multi-model response</li>
                 <li>Offers fast and smart models</li>
               </ul>
             </div>
@@ -280,13 +280,6 @@ export default function SDKPlayground() {
         setIsDismissing(false);
       }, 250);
     }
-
-    // Track prompt submission event with active fusion feature
-    amplitude.track('Prompt Submitted', {
-      promptLength: currentInput.length,
-      selectedModels: models,
-      activeFusion: activeButton || 'none'  // Will be 'Multi-Model Response', 'Summarise', 'Compare', 'Highlight', or 'none'
-    });
 
     // Add new conversation entry
     setConversations(prev => {
@@ -497,15 +490,11 @@ export default function SDKPlayground() {
     console.log('Latest responses for fusion:', latestResponses);
 
     const prePrompts = {
-      "Multi-Model Response": "Instruction: Analyze and synthesize the responses from three different persons to the following question [INSERT QUESTION HERE] Your synthesis should: provide a comprehensive answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models use bold or italics where appropriate highlight disagreements between responses (and refer to the person) if any you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question",
-      Summarise: "Instruction: Generate a concise, executive-level summary of three different responses to the following question: [INSERT QUESTION HERE]\n\nYour summary should:\n\nBe brief and straight to the point\nUse bullet points or numbered lists for clarity\nHighlight key features or benefits for each option\nMention any standout or highlights\nFormat the summary for easy readability\nUse bold for key points that answer the questions where appropriate.\nUse italics for emphasis where appropriate.\n\nStructure of response:\n\nSummary (to be Bolded): [Summary of responses]\n\n1. [Name of Person] (Bold): [Summary of the Person's Response], and so on.",
-      Compare: "[INSERT COMPARE PRE-PROMPT HERE]",
-      Merge: "Instruction: Take all 3 responses and merge into 1 single output in respond to [INSERT PROMPT HERE] Your merge should: prioritse the exact ask of the prompt/request consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one you may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the prompt"
-    };
+      "Multi-Model Response": "Instruction: Response in the language as the ask and the responses. Based on the ask, use only 1 of the 2 modes that would provide the most optimal output: synethsis, or create. There is no need to state explicitly which mode you are using in the response. Each mode corresponds to a set of requirements.\\n\\nSynthesis: 'Prioritize key information in your answer. Analyze and synthesize the responses from three different persons to the ask\\n\\nYour synthesis should:\\n\\n- provide answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models use bold or italics where appropriate\\n- highlight discrepancies between responses (and refer to the person) if relevant, you may present this via table if deemed useful; \\n- you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question'\\n\\nCreate: 'Take all 3 responses and merge into 1 single output in respond to the ask. It should:\\n\\n- Prioritse the exact ask\\n- Consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one\\n- You may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the ask\\n- Do not state the source, or mention Anny, Ben, and Clarice'\\n\\n- For both modes, add a divider after the output, and have footnotes of which parts were contributed by which response",    };
 
-    const fusionModel = 'gemini-1.5-flash-002';
+    const fusionModel = 'gpt-4o-2024-08-06';
 
-    const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Question: ${latestPrompt}\n\nAnny: ${latestResponses[0]}\nBen: ${latestResponses[1]}\nClarice: ${latestResponses[2]}`;
+    const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Ask: ${latestPrompt}\n\nAnny: ${latestResponses[0]}\nBen: ${latestResponses[1]}\nClarice: ${latestResponses[2]}`;
 
     console.log('Fusion prompt:', prompt);
 
@@ -736,9 +725,46 @@ export default function SDKPlayground() {
               ref={inputRef}
               value={input}
               onChange={(e) => {
+                const cursorPosition = e.currentTarget.selectionStart;
+                const textBeforeCursor = e.currentTarget.value.slice(0, cursorPosition);
+                const textAfterCursor = e.currentTarget.value.slice(cursorPosition);
+                const element = e.currentTarget;
+                
                 setInput(e.target.value);
-                e.currentTarget.style.height = 'auto';
-                e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                element.style.height = 'auto';
+                element.style.height = `${element.scrollHeight}px`;
+                
+                // Restore cursor position after paste
+                requestAnimationFrame(() => {
+                  if (element && document.activeElement === element) {
+                    element.selectionStart = cursorPosition;
+                    element.selectionEnd = cursorPosition;
+                  }
+                });
+              }}
+              onPaste={(e) => {
+                e.preventDefault();
+                const cursorPosition = e.currentTarget.selectionStart;
+                const textBeforeCursor = e.currentTarget.value.slice(0, cursorPosition);
+                const textAfterCursor = e.currentTarget.value.slice(cursorPosition);
+                const pastedText = e.clipboardData.getData('text').replace(/\n/g, ' ');
+                
+                const newValue = textBeforeCursor + pastedText + textAfterCursor;
+                const newCursorPosition = cursorPosition + pastedText.length;
+                
+                setInput(newValue);
+                
+                // Wait for the next render cycle and check if the element exists
+                setTimeout(() => {
+                  if (e.currentTarget) {
+                    e.currentTarget.selectionStart = newCursorPosition;
+                    e.currentTarget.selectionEnd = newCursorPosition;
+                    
+                    // Update height after cursor position is set
+                    e.currentTarget.style.height = 'auto';
+                    e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                  }
+                }, 0);
               }}
               onSubmit={handleSubmit}
               placeholder="Enter your message..."
