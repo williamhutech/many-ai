@@ -81,6 +81,16 @@ type CompletionResponse = {
   }>;
 };
 
+interface LogEntry {
+  id: string;
+  session_id: string;
+  conversation_id: string;
+  prompt: string;
+  model_name: string;
+  model_response: string;
+  created_at: string;
+}
+
 export async function POST(req: Request) {
   const { prompt, sessionId, conversationHistories, selectedModel } = await req.json();
 
@@ -154,15 +164,18 @@ export async function POST(req: Request) {
 
         // After getting the response, add it to history
         let fullResponse = '';
-        for await (const event of modelStream) {
-          if ('delta' in event && 'text' in event.delta) {
-            fullResponse += event.delta.text;
-            await writeChunk(event.delta.text);
+        for await (const chunk of modelStream) {
+          if (chunk.type === 'content_block_delta' && 'text' in chunk.delta) {
+            fullResponse += chunk.delta.text;
+            await writeChunk(chunk.delta.text);
           }
         }
         
         // Add the assistant's response to history
-        history.push({ role: 'assistant', content: fullResponse });
+        history.push({ 
+          role: 'assistant', 
+          content: fullResponse 
+        });
       } else if (provider.clientName === 'openai') {
         modelStream = await (client as OpenAI).chat.completions.create({
           model: model.id,
@@ -178,11 +191,15 @@ export async function POST(req: Request) {
         }
       } else if (provider.clientName === 'google') {
         const model = googleClient.getGenerativeModel({ model: selectedModel });
+        
+        // Convert history to Gemini's format
+        const geminiHistory = history.map((msg: { role: string; content: string }) => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }]
+        }));
+
         const chat = model.startChat({
-          history: history.map((msg: { role: string; content: string }) => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: msg.content,
-          })),
+          history: geminiHistory.slice(0, -1) // Exclude the last message as it will be sent separately
         });
 
         const result = await chat.sendMessageStream(prompt);

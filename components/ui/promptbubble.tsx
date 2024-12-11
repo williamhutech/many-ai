@@ -1,0 +1,256 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
+
+interface UserPromptBubbleProps {
+  prompt: string;
+  index: number;
+  isEditing: boolean;
+  onEditStart: () => void;
+  onEditCancel: () => void;
+  onEditComplete?: (newPrompt: string) => void;
+  onRegenerateFromEdit?: (newPrompt: string, index: number) => void;
+}
+
+export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
+  prompt,
+  index,
+  isEditing,
+  onEditStart,
+  onEditCancel,
+  onEditComplete,
+  onRegenerateFromEdit,
+}) => {
+  const [editedPrompt, setEditedPrompt] = useState(prompt);
+  const [bubbleWidth, setBubbleWidth] = useState('auto');
+  const [isHovered, setIsHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    setEditedPrompt(prompt);
+  }, [prompt]);
+
+  const calculateOptimalWidth = (text: string, forceHoverState?: boolean) => {
+    const maxWidth = window.innerWidth * 0.75;
+    
+    const span = document.createElement('span');
+    span.style.visibility = 'hidden';
+    span.style.position = 'absolute';
+    span.style.whiteSpace = 'pre-wrap';
+    span.style.fontSize = '14px';
+    span.style.padding = '12px';
+    span.style.lineHeight = '1.5';
+    span.style.wordBreak = 'break-all';
+    span.style.maxWidth = `${maxWidth}px`;
+    span.textContent = text;
+    document.body.appendChild(span);
+    
+    const textWidth = span.offsetWidth;
+    document.body.removeChild(span);
+    
+    // Always include button padding in edit mode
+    const padding = isEditing || forceHoverState ? 64 : 24;
+    const optimalWidth = textWidth + padding;
+    
+    if (text.length < 50) {
+      return `${Math.min(optimalWidth, maxWidth * 0.4)}px`;
+    }
+    
+    return `${Math.min(optimalWidth, maxWidth)}px`;
+  };
+
+  useEffect(() => {
+    const calculateInitialWidth = () => {
+      const nonHoverWidth = calculateOptimalWidth(prompt, false);
+      setBubbleWidth(nonHoverWidth);
+    };
+    
+    calculateInitialWidth();
+  }, [prompt]);
+
+  const adjustTextareaHeight = (element: HTMLTextAreaElement) => {
+    element.style.height = '24px';
+    const scrollHeight = element.scrollHeight;
+    const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
+    const maxHeight = lineHeight * 3;
+    element.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    
+    if (scrollHeight > maxHeight) {
+      element.style.overflowY = 'auto';
+    } else {
+      element.style.overflowY = 'hidden';
+    }
+  };
+
+  const handleEditCancel = () => {
+    onEditCancel();
+    setEditedPrompt(prompt);
+    setIsHovered(false);
+    setBubbleWidth(calculateOptimalWidth(prompt, false));
+  };
+
+  const handleEditComplete = () => {
+    const trimmedPrompt = editedPrompt.trim();
+    if (trimmedPrompt !== '' && trimmedPrompt !== prompt) {
+      setEditedPrompt(trimmedPrompt);
+      onEditComplete?.(trimmedPrompt);
+      
+      setTimeout(() => {
+        onRegenerateFromEdit?.(trimmedPrompt, index);
+      }, 0);
+    }
+    setIsHovered(false);
+    setBubbleWidth(calculateOptimalWidth(trimmedPrompt, false));
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isEditing && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        handleEditCancel();
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isEditing) return;
+      
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleEditComplete();
+      } else if (event.key === 'Escape') {
+        handleEditCancel();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditing]);
+
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
+    }
+  }, [isEditing]);
+
+  return (
+    <div className="flex justify-end mb-4">
+      <div 
+        ref={containerRef}
+        className="relative rounded bg-gray-100 group inline-block transition-all duration-200"
+        style={{ 
+          width: bubbleWidth,
+          maxWidth: '75%'
+        }}
+        onMouseEnter={() => {
+          setIsHovered(true);
+          setBubbleWidth(calculateOptimalWidth(prompt, true));
+        }}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          setBubbleWidth(calculateOptimalWidth(prompt, false));
+        }}
+      >
+        {isEditing ? (
+          <div className="p-3 relative">
+            <textarea
+              ref={textareaRef}
+              value={editedPrompt}
+              onChange={(e) => {
+                setEditedPrompt(e.target.value);
+                adjustTextareaHeight(e.target);
+                setBubbleWidth(calculateOptimalWidth(e.target.value));
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleEditComplete();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  handleEditCancel();
+                }
+              }}
+              className="bg-transparent border-none focus:outline-none resize-none text-sm text-gray-800 w-full p-0 m-0"
+              style={{
+                height: '24px',
+                overflow: 'hidden',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+                display: '-webkit-box',
+                WebkitLineClamp: '3',
+                WebkitBoxOrient: 'vertical',
+                lineHeight: '1.5',
+                paddingRight: isHovered ? '40px' : '0',
+              }}
+              autoFocus
+            />
+            <button
+              onClick={handleEditComplete}
+              className="absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-zinc-400"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div className="p-3 relative">
+            <div 
+              className="text-sm text-gray-800"
+              style={{
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: '3',
+                WebkitBoxOrient: 'vertical',
+                lineHeight: '1.5',
+                textAlign: 'justify',
+                textJustify: 'inter-word',
+                paddingRight: isHovered ? '40px' : '0',
+                transition: 'padding-right 0.2s ease-out'
+              }}
+            >
+              {prompt}
+            </div>
+            <button
+              onClick={onEditStart}
+              className="absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 bg-gray-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-zinc-400"
+              >
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                <path d="m15 5 4 4"/>
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}; 

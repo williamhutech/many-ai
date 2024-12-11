@@ -9,20 +9,29 @@ interface ResultCardProps {
   index: number;
   models: string[];
   results: string[];
+  conversationIndex?: number;
   isStreaming?: boolean;
   isFusionCard?: boolean;
   fusionResult?: string;
   isFusionLoading?: boolean;
   showAllModels?: boolean;
   onToggleShowAllModels?: () => void;
-  onRegenerate?: (modelIndex: number | null) => void;
+  onRegenerate?: (index: number | null) => void;
   isRegenerating?: boolean;
+  isLatestConversation?: boolean;
+  conversation?: {
+    id: string;
+    timestamp: string;
+  };
 }
 
-const ResultCard: React.FC<ResultCardProps> = React.memo(
-  ({ index, models, results, isStreaming, isFusionCard, fusionResult, isFusionLoading, showAllModels, onToggleShowAllModels, onRegenerate, isRegenerating }) => {
+export const ResultCard: React.FC<ResultCardProps> = 
+  ({ index, models, results, conversationIndex, isStreaming, isFusionCard, fusionResult, isFusionLoading, showAllModels, onToggleShowAllModels, onRegenerate, isRegenerating, isLatestConversation }) => {
     const textareaRef = useRef<HTMLDivElement>(null);
-    const currentResult = isFusionCard ? fusionResult : results[index];
+    
+    const shouldShowStreaming = isLatestConversation && isStreaming;
+    
+    const currentResult = isFusionCard ? fusionResult : (results && results[index] ? results[index] : '');
     const [hasCopied, setHasCopied] = useState(false);
 
     useEffect(() => {
@@ -182,7 +191,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(
             {isFusionCard && (
               <button
                 onClick={onToggleShowAllModels}
-                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors hide-on-mobile"
               >
                 {showAllModels ? (
                   <>
@@ -224,7 +233,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(
           </div>
         </div>
         <CardContent className="flex-1 overflow-y-auto p-5 pt-1 relative">
-          {((isStreaming && !currentResult && !isFusionCard) || 
+          {((shouldShowStreaming && isStreaming) || 
              (isFusionCard && (isFusionLoading || !currentResult)) ||
              isRegenerating) ? (
             <ContentSkeletonLoader />
@@ -241,7 +250,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(
       </Card>
     );
   }
-);
+;
 
 ResultCard.displayName = 'ResultCard';
 

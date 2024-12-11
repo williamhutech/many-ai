@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useState, useEffect, useRef } from 'react';
 import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
-import { Button, Input, TruncatedText } from "@/components/ui";
+import { Button, Input, UserPromptBubble } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getProviderForModel } from '@/config/models';
 import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
@@ -265,9 +265,7 @@ export default function SDKPlayground() {
   useEffect(() => {
     const newSessionId = crypto.randomUUID();
     setSessionId(newSessionId);
-    localStorage.removeItem('haikuHistory');
-    localStorage.removeItem('sonnetHistory');
-    localStorage.removeItem('gpt4oHistory');
+    // Initialize empty conversation histories for all models
     setConversationHistories({});
   }, []);
 
@@ -402,15 +400,31 @@ export default function SDKPlayground() {
         // Update conversation histories
         setConversationHistories(prev => {
           const history = prev[modelId] || [];
-          const newHistory = [
-            ...history,
-            { role: 'user', content: currentInput },
-            { role: 'assistant', content: modelResponse },
-          ];
-          console.log(`Updated conversation history for ${modelId}:`, newHistory);
+          const newHistory = [...history];
+          
+          // If this is a new conversation
+          if (history.length === 0) {
+            newHistory.push(
+              { role: 'user', content: currentInput },
+              { role: 'assistant', content: modelResponse }
+            );
+          } else {
+            // Update or append the latest exchange
+            if (history[history.length - 1].role === 'assistant') {
+              // If the last message was from assistant, add new user message and response
+              newHistory.push(
+                { role: 'user', content: currentInput },
+                { role: 'assistant', content: modelResponse }
+              );
+            } else {
+              // If the last message was from user, append assistant response
+              newHistory.push({ role: 'assistant', content: modelResponse });
+            }
+          }
+
           return {
             ...prev,
-            [modelId]: newHistory,
+            [modelId]: newHistory
           };
         });
 
@@ -668,7 +682,6 @@ export default function SDKPlayground() {
       return;
     }
 
-    // Rest of regenerate logic for individual models
     setRegeneratingModels(prev => [...prev, modelIndex]);
     const modelId = models[modelIndex];
     const provider = getProviderForModel(modelId);
@@ -677,13 +690,24 @@ export default function SDKPlayground() {
     setStreamingModels(prev => [...prev, provider.nickname]);
 
     try {
+      // Get the current history for this model
+      const currentHistory = conversationHistories[modelId] || [];
+      
+      // Remove the last assistant response if it exists
+      const updatedHistory = currentHistory.length >= 2 
+        ? currentHistory.slice(0, -1) 
+        : currentHistory;
+
+      // Make the API call with the updated history
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: currentPrompt,
           sessionId,
-          conversationHistories,
+          conversationHistories: {
+            [modelId]: updatedHistory
+          },
           selectedModel: modelId,
         }),
       });
@@ -722,19 +746,21 @@ export default function SDKPlayground() {
         }
       }
 
-      // Update conversation history for this model
+      // Update conversation history correctly
       setConversationHistories(prev => {
         const updated = { ...prev };
-        const history = updated[modelId] || [];
-        if (history.length >= 2) {
-          history[history.length - 1] = { role: 'assistant', content: modelResponse };
+        if (updated[modelId]?.length >= 2) {
+          // Replace the last assistant response
+          updated[modelId] = updated[modelId].slice(0, -1);
+          updated[modelId].push({ role: 'assistant', content: modelResponse });
         } else {
-          history.push(
+          // Add new conversation pair
+          updated[modelId] = [
+            ...(updated[modelId] || []),
             { role: 'user', content: currentPrompt },
             { role: 'assistant', content: modelResponse }
-          );
+          ];
         }
-        updated[modelId] = history;
         return updated;
       });
 
@@ -775,157 +801,47 @@ export default function SDKPlayground() {
                   className="space-y-4"
                   ref={index === conversations.length - 1 ? latestConversationRef : null}
                 >
-                  {/* User's prompt speech bubble */}
-                  <div className="flex justify-end mb-4">
-                    <div 
-                      className="relative rounded bg-gray-100 group" 
-                      style={{ 
-                        maxWidth: '75%',
-                        width: 'fit-content',
-                        minWidth: 'min-content'
-                      }}
-                    >
-                      {editingPromptIndex === index ? (
-                        <div className="text-sm text-gray-800 p-3">
-                          <div 
-                            className="relative" 
-                            style={{ 
-                              minHeight: bubbleHeights[index] || '24px',
-                              height: 'auto',
-                              width: 'fit-content', // Allow content to determine width
-                              minWidth: '100%' // Ensure it's at least as wide as the original text
-                            }}
-                          >
-                            <textarea
-                              value={editedPrompt}
-                              onChange={(e) => {
-                                setEditedPrompt(e.target.value);
-                                const textarea = e.target;
-                                textarea.style.height = 'auto';
-                                const scrollHeight = textarea.scrollHeight;
-                                const prevHeight = previousHeightRef.current[index] || 24;
-                                
-                                if (scrollHeight !== prevHeight) {
-                                  const newHeight = Math.max(
-                                    bubbleHeights[index] || 24,
-                                    Math.min(scrollHeight, 24 * 3)
-                                  );
-                                  previousHeightRef.current[index] = newHeight;
-                                  setBubbleHeights(prev => ({
-                                    ...prev,
-                                    [index]: newHeight
-                                  }));
-                                }
-                              }}
-                              className="bg-transparent border-none focus:outline-none resize-none text-sm text-gray-800"
-                              style={{
-                                height: bubbleHeights[index] || 'auto',
-                                overflow: 'hidden',
-                                whiteSpace: 'pre-wrap',
-                                wordWrap: 'break-word',
-                                width: '100%',
-                                minWidth: '100%'
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  if (editedPrompt.trim() === '') {
-                                    setEditedPrompt(conversation.prompt);
-                                  }
-                                  setEditingPromptIndex(null);
-                                  if (editedPrompt.trim() !== '') {
-                                    setConversations(prev => {
-                                      const newConversations = [...prev];
-                                      newConversations[index].prompt = editedPrompt;
-                                      return newConversations;
-                                    });
-                                  }
-                                } else if (e.key === 'Escape') {
-                                  e.preventDefault();
-                                  setEditedPrompt(conversation.prompt);
-                                  setEditingPromptIndex(null);
-                                }
-                              }}
-                              autoFocus
-                            />
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setEditedPrompt(conversation.prompt);
-                              setEditingPromptIndex(null);
-                            }}
-                            className="absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="text-zinc-400"
-                            >
-                              <path d="M18 6L6 18" />
-                              <path d="M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="p-3 transition-[padding] duration-200 group-hover:pr-10">
-                          <TruncatedText 
-                            text={conversation.prompt} 
-                            maxLines={3} 
-                            onHeightChange={(height) => {
-                              const prevHeight = previousHeightRef.current[index];
-                              if (prevHeight !== height) {
-                                previousHeightRef.current[index] = height;
-                                setBubbleHeights(prev => ({
-                                  ...prev,
-                                  [index]: height
-                                }));
-                              }
-                            }}
-                          />
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setEditingPromptIndex(index);
-                              setEditedPrompt(conversation.prompt);
-                              setTimeout(() => {
-                                const textarea = document.querySelector('textarea');
-                                if (textarea) {
-                                  textarea.selectionStart = textarea.selectionEnd = conversation.prompt.length;
-                                }
-                              }, 0);
-                            }}
-                            className="absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className="text-zinc-400"
-                            >
-                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                              <path d="m15 5 4 4"/>
-                            </svg>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <UserPromptBubble
+                    prompt={conversation.prompt}
+                    index={index}
+                    isEditing={editingPromptIndex === index}
+                    onEditStart={() => {
+                      setEditingPromptIndex(index);
+                      setEditedPrompt(conversation.prompt);
+                    }}
+                    onEditCancel={() => {
+                      setEditingPromptIndex(null);
+                      setEditedPrompt('');
+                    }}
+                    onEditComplete={(newPrompt) => {
+                      setConversations(prev => {
+                        const newConversations = [...prev];
+                        newConversations[index].prompt = newPrompt;
+                        return newConversations;
+                      });
+                      setEditingPromptIndex(null);
+                      setEditedPrompt('');
+                    }}
+                    onRegenerateFromEdit={(newPrompt, promptIndex) => {
+                      // Update the prompt first
+                      setConversations(prev => {
+                        const newConversations = [...prev];
+                        newConversations[promptIndex].prompt = newPrompt;
+                        return newConversations;
+                      });
+                      
+                      // Clear previous results for this conversation
+                      setConversations(prev => {
+                        const newConversations = [...prev];
+                        newConversations[promptIndex].results = ['', '', ''];
+                        newConversations[promptIndex].fusionResult = '';
+                        return newConversations;
+                      });
+
+                      // Regenerate responses with the new prompt
+                      handleRegenerate(null);
+                    }}
+                  />
                   {/* AI response cards */}
                   <div className="hidden sm:flex flex-col gap-6">
                     {/* ManyAI card */}
