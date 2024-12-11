@@ -32,7 +32,9 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --header-height: 64px;
-    --footer-height: 120px;
+    --footer-height: 80px;
+    --footer-max-height: 200px;
+    --footer-padding: 16px;
   }
 }
 
@@ -76,9 +78,10 @@ html, body, #__next {
 
 main {
   margin-top: var(--header-height);
-  margin-bottom: var(--footer-height);
+  padding-bottom: calc(var(--footer-height) + 16px);
   overflow-y: auto;
-  height: calc(100vh - var(--header-height) - var(--footer-height));
+  height: calc(100vh - var(--header-height));
+  transition: padding-bottom 0.2s ease-out;
 }
 
 footer {
@@ -86,20 +89,82 @@ footer {
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--footer-height);
+  min-height: var(--footer-height);
+  max-height: var(--footer-max-height);
   z-index: 50;
   background: #fafafa;
-  overflow: hidden;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1rem;
+  transform-origin: bottom;
+  will-change: min-height;
+  transition: min-height 0.2s ease-out;
+  border-top: 1px solid var(--border);
+}
+
+.footer-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: relative;
+  min-height: calc(var(--footer-height) - 32px);
+}
+
+.streaming-status {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  width: 100%;
+  min-height: 20px;
+  background: transparent;
+}
+
+/* Add padding container for input */
+.footer-input-container {
+  position: relative;
+  padding-top: 0.5rem;
+  margin-top: auto;
+  width: 100%;
+}
+
+/* Add specific padding for initial state */
+.footer-content.initial-state .footer-input-container {
+  padding-top: 1rem;
 }
 
 @media screen and (max-width: 768px) {
   footer {
-    padding: 0.25rem 0.5rem;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 0.25rem);
+    padding: 0.5rem;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+    transition: min-height 0.2s ease-out;
+    height: auto !important; /* Force height to be determined by content */
+    bottom: 0 !important; /* Ensure it stays at bottom */
+  }
+
+  main {
+    padding-bottom: calc(var(--footer-height) + 16px);
+    height: calc(100vh - var(--header-height));
+    transition: padding-bottom 0.2s ease-out;
+  }
+
+  .mobile-carousel-container {
+    position: relative;
+    margin-top: 1rem;
+    height: calc(100vh - 380px);
+    overflow: hidden;
+    z-index: 0;
+    margin-bottom: calc(var(--footer-height) + 16px);
+  }
+
+  .footer-content {
+    padding-bottom: env(safe-area-inset-bottom);
   }
   
-  .mobile-carousel-container {
-    margin-bottom: 0;
+  .streaming-status {
+    top: -20px;
   }
 }
 
@@ -165,8 +230,7 @@ body {
 }
 
 .transition-transform {
-  transition-property: transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s ease-out;
 }
 
 .duration-300 {
@@ -176,7 +240,7 @@ body {
 @media screen and (max-width: 768px) {
   main {
     padding-top: calc(var(--header-height) + 10px);
-    height: calc(100vh - var(--header-height) - var(--footer-height));
+    height: calc(100vh - var(--header-height));
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     position: relative;
@@ -189,6 +253,7 @@ body {
     height: calc(100vh - 380px);
     overflow: hidden;
     z-index: 0;
+    margin-bottom: calc(var(--footer-height) + 16px);
   }
 
   .conversation-container {

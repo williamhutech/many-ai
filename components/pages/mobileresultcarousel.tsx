@@ -12,6 +12,7 @@ interface MobileResultCarouselProps {
   fusionResult: string;
   isFusionLoading: boolean;
   activeButton: string | null;
+  onRegenerate: (modelIndex: number | null) => void;
 }
 
 const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
@@ -20,6 +21,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   fusionResult,
   isFusionLoading,
   activeButton,
+  onRegenerate,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -117,6 +119,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
                   isFusionCard={true}
                   fusionResult={fusionResult}
                   isFusionLoading={isFusionLoading}
+                  onRegenerate={onRegenerate}
                 />
               ) : (
                 <ResultCard
@@ -124,6 +127,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
                   models={models}
                   results={results}
                   isStreaming={true}
+                  onRegenerate={onRegenerate}
                 />
               )}
             </div>

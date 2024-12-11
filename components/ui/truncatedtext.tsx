@@ -3,9 +3,10 @@ import React, { useRef, useEffect, useState } from 'react';
 interface TruncatedTextProps {
   text: string;
   maxLines: number;
+  onHeightChange?: (height: number) => void;
 }
 
-export const TruncatedText: React.FC<TruncatedTextProps> = ({ text, maxLines }) => {
+export const TruncatedText: React.FC<TruncatedTextProps> = ({ text, maxLines, onHeightChange }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
 
@@ -16,8 +17,10 @@ export const TruncatedText: React.FC<TruncatedTextProps> = ({ text, maxLines }) 
 
       const lineHeight = parseInt(window.getComputedStyle(container).lineHeight);
       const maxHeight = lineHeight * maxLines;
+      const actualHeight = container.scrollHeight;
 
-      setIsTruncated(container.scrollHeight > maxHeight);
+      setIsTruncated(actualHeight > maxHeight);
+      onHeightChange?.(Math.min(actualHeight, maxHeight));
     };
 
     checkTruncation();
@@ -26,18 +29,21 @@ export const TruncatedText: React.FC<TruncatedTextProps> = ({ text, maxLines }) 
     return () => {
       window.removeEventListener('resize', checkTruncation);
     };
-  }, [text, maxLines]);
+  }, [text, maxLines, onHeightChange]);
 
   return (
     <div
       ref={containerRef}
       className="text-sm text-gray-800"
       style={{
-        display: '-webkit-box',
-        WebkitLineClamp: maxLines,
-        WebkitBoxOrient: 'vertical',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        maxHeight: `${24 * maxLines}px`,
+        width: 'fit-content',
+        minWidth: 'min-content',
+        maxWidth: '100%'
       }}
     >
       {text}

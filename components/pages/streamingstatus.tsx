@@ -28,7 +28,7 @@ const StreamingStatus: React.FC<StreamingStatusProps> = ({
     } are thinking...`;
   }
 
-  return statusText ? <div className="text-xs text-gray-500">{statusText}</div> : null;
+  return statusText ? <div className="streaming-status text-xs text-gray-500">{statusText}</div> : null;
 };
 
 export default StreamingStatus;

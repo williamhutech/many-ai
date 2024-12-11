@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { getAllModels, Model, getProviderForModel } from '@/config/models';
@@ -9,11 +9,19 @@ interface InitialModelSelectionProps {
   handleModelChange: (index: number, value: string) => void;
 }
 
-const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, handleModelChange }) => {
+const InitialModelSelectionComponent: React.FC<InitialModelSelectionProps> = ({ models, handleModelChange }) => {
   const [modelOptions, setModelOptions] = useState<Model[]>([]);
 
   useEffect(() => {
-    setModelOptions(getAllModels());
+    const loadModels = async () => {
+      const models = getAllModels();
+      setModelOptions(models);
+    };
+    loadModels();
+  }, []);
+
+  const getProvider = useCallback((modelId: string) => {
+    return getProviderForModel(modelId);
   }, []);
 
   return (
@@ -24,7 +32,7 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, h
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full">
         {[0, 1, 2].map((index) => {
           const selectedModel = modelOptions.find(model => model.id === models[index]);
-          const selectedProvider = selectedModel ? getProviderForModel(selectedModel.id) : null;
+          const selectedProvider = selectedModel ? getProvider(selectedModel.id) : null;
 
           return (
             <Card key={index} className="p-4">
@@ -45,7 +53,7 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, h
                 </SelectTrigger>
                 <SelectContent>
                   {modelOptions.map((model) => {
-                    const provider = getProviderForModel(model.id);
+                    const provider = getProvider(model.id);
                     return (
                       <SelectItem 
                         key={model.id} 
@@ -77,5 +85,10 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, h
     </div>
   );
 };
+
+InitialModelSelectionComponent.displayName = 'InitialModelSelection';
+
+const InitialModelSelection = React.memo(InitialModelSelectionComponent);
+InitialModelSelection.displayName = 'InitialModelSelection';
 
 export default InitialModelSelection;

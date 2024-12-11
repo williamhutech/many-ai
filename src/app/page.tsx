@@ -4,13 +4,44 @@ import Head from 'next/head';
 import { useState, useEffect, useRef } from 'react';
 import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
-import { Button, Input, TruncatedText, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui";
+import { Button, Input, TruncatedText } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getProviderForModel } from '@/config/models';
 import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
 import Image from 'next/image';
 import { getDefaultModels } from '@/config/models';
 import MobileResultCarousel from '@/components/pages/mobileresultcarousel';
+import dynamic from 'next/dynamic';
+import React from 'react';
+
+const Select = dynamic(() => import('@/components/ui/select').then(mod => mod.Select), {
+  ssr: false,
+  loading: () => (
+    <div className="h-8 w-24 bg-zinc-100 animate-pulse rounded-md"></div>
+  )
+});
+
+const SelectTrigger = dynamic(() => import('@/components/ui/select').then(mod => mod.SelectTrigger), {
+  ssr: false
+});
+
+const SelectContent = dynamic(() => import('@/components/ui/select').then(mod => mod.SelectContent), {
+  ssr: false
+});
+
+const SelectItem = dynamic(() => import('@/components/ui/select').then(mod => mod.SelectItem), {
+  ssr: false
+});
+
+const preloadSelectComponents = () => {
+  const selectPromise = import('@/components/ui/select');
+  selectPromise.then(mod => {
+    mod.Select;
+    mod.SelectTrigger;
+    mod.SelectContent;
+    mod.SelectItem;
+  });
+};
 
 const Header = ({ mode, onModeChange, onNewChat }: { 
   mode: 'fast' | 'smart', 
@@ -120,7 +151,10 @@ const Header = ({ mode, onModeChange, onNewChat }: {
           value={mounted ? (mode === 'fast' ? 'Fast Model' : 'Smart Model') : undefined} 
           onValueChange={handleModeChange}
         >
-          <SelectTrigger className="h-8 text-xs border border-zinc-200 bg-white w-auto px-3 font-inter">
+          <SelectTrigger 
+            className="h-8 text-xs border border-zinc-200 bg-white w-auto px-3 font-inter"
+            onMouseEnter={preloadSelectComponents}
+          >
             {mounted ? (mode === 'fast' ? 'Fast Model' : 'Smart Model') : ''}
           </SelectTrigger>
           <SelectContent>
@@ -205,6 +239,12 @@ export default function SDKPlayground() {
   const [isFusionLoading, setIsFusionLoading] = useState(false);
   const fusionResultRef = useRef<HTMLDivElement>(null);
   const [showAllModels, setShowAllModels] = useState(true);
+  const [footerHeight, setFooterHeight] = React.useState(120); // Default height
+  const [editingPromptIndex, setEditingPromptIndex] = useState<number | null>(null);
+  const [editedPrompt, setEditedPrompt] = useState<string>('');
+  const [regeneratingModels, setRegeneratingModels] = useState<number[]>([]);
+  const [bubbleHeights, setBubbleHeights] = useState<{ [key: number]: number }>({});
+  const previousHeightRef = useRef<{ [key: number]: number }>({});
 
   // Initialize Amplitude when the component mounts
   useEffect(() => {
@@ -490,10 +530,10 @@ export default function SDKPlayground() {
     console.log('Latest responses for fusion:', latestResponses);
 
     const prePrompts = {
-      "Multi-Model Response": "Instruction: Response in the language as the ask and the responses. Based on the ask, use only 1 of the 2 modes that would provide the most optimal output: synethsis, or create. There is no need to state explicitly which mode you are using in the response. Each mode corresponds to a set of requirements.\\n\\nSynthesis: 'Prioritize key information in your answer. Analyze and synthesize the responses from three different persons to the ask\\n\\nYour synthesis should:\\n\\n- provide answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models use bold or italics where appropriate\\n- highlight discrepancies between responses (and refer to the person) if relevant, you may present this via table if deemed useful; \\n- you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question'\\n\\nCreate: 'Take all 3 responses and merge into 1 single output in respond to the ask. It should:\\n\\n- Prioritse the exact ask\\n- Consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one\\n- You may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the ask\\n- Do not state the source, or mention Anny, Ben, and Clarice'\\n\\n- For both modes, add a divider after the output, and have footnotes of which parts were contributed by which response",    };
+      "Multi-Model Response": "Instruction: Response in the language as the ask and the responses. Based on the ask, use only 1 of the 2 modes that would provide the most optimal output: synethsis, or create. There is no need to state explicitly which mode you are using in the response. If there is minimal to no value add in synthesizing, nor is the ask related to create/generate - use the 3rd mode - follow up. Each mode corresponds to a set of requirements.\\n\\n1.Synthesis: 'Prioritize key information in your answer. Analyze and synthesize the responses from three different persons to the ask\\n\\nYour synthesis should:\\n\\n- provide answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models\\n- use bold and/or bullet points where appropriate\\n- highlight discrepancies between responses (and refer to the person) if relevant, you may present this via table if deemed useful; \\n- you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question'\\n\\n2.Create: 'Take all 3 responses and merge into 1 single output in respond to the ask. It should:\\n\\n- Prioritse the exact ask\\n- Consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one\\n- You may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the ask\\n- Do not state the source, or mention Anny, Ben, and Clarice'\\n\\n- For both modes, add a divider after the output, and have footnotes of which parts were contributed by which response.\\n\\n3.Follow Up: 'Since no value add in synthesizing/creating, simply respond to the ask, followed by some sort of follow up. No mention of name of response. No footnote or divider allowed.'",    };
 
     const fusionModel = 'gpt-4o-2024-08-06';
-
+      
     const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Ask: ${latestPrompt}\n\nAnny: ${latestResponses[0]}\nBen: ${latestResponses[1]}\nClarice: ${latestResponses[2]}`;
 
     console.log('Fusion prompt:', prompt);
@@ -586,6 +626,126 @@ export default function SDKPlayground() {
     amplitude.track('New Chat Started');
   };
 
+  React.useEffect(() => {
+    const handleHeightChange = (e: CustomEvent<{ height: number }>) => {
+      setFooterHeight(e.detail.height);
+      document.documentElement.style.setProperty('--footer-height', `${e.detail.height}px`);
+    };
+
+    window.addEventListener('inputHeightChange', handleHeightChange as EventListener);
+    return () => {
+      window.removeEventListener('inputHeightChange', handleHeightChange as EventListener);
+    };
+  }, []);
+
+  const handleRegenerate = async (modelIndex: number | null) => {
+    if (!sessionId || conversations.length === 0) return;
+    
+    const currentConversation = conversations[conversations.length - 1];
+    const currentPrompt = currentConversation.prompt;
+    
+    if (modelIndex === null) {
+      // Regenerate ManyAI fusion result using latest results from the current conversation
+      const latestResults = currentConversation.results;
+      const updatedHistories = { ...conversationHistories };
+      
+      // Update histories with latest results before fusion
+      models.forEach((modelId, idx) => {
+        const history = updatedHistories[modelId] || [];
+        // Update the last assistant response or add new ones
+        if (history.length >= 2) {
+          history[history.length - 1] = { role: 'assistant', content: latestResults[idx] || '' };
+        } else {
+          history.push(
+            { role: 'user', content: currentPrompt },
+            { role: 'assistant', content: latestResults[idx] || '' }
+          );
+        }
+        updatedHistories[modelId] = history;
+      });
+      
+      handleFusion('Multi-Model Response', false, updatedHistories);
+      return;
+    }
+
+    // Rest of regenerate logic for individual models
+    setRegeneratingModels(prev => [...prev, modelIndex]);
+    const modelId = models[modelIndex];
+    const provider = getProviderForModel(modelId);
+    if (!provider) return;
+
+    setStreamingModels(prev => [...prev, provider.nickname]);
+
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: currentPrompt,
+          sessionId,
+          conversationHistories,
+          selectedModel: modelId,
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to generate response');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let modelResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5));
+              if (data.content) {
+                modelResponse += data.content;
+                setConversations(prev => {
+                  const newConversations = [...prev];
+                  newConversations[newConversations.length - 1].results[modelIndex] = modelResponse;
+                  return newConversations;
+                });
+              }
+            } catch (error) {
+              console.error('Error parsing JSON:', error);
+            }
+          }
+        }
+      }
+
+      // Update conversation history for this model
+      setConversationHistories(prev => {
+        const updated = { ...prev };
+        const history = updated[modelId] || [];
+        if (history.length >= 2) {
+          history[history.length - 1] = { role: 'assistant', content: modelResponse };
+        } else {
+          history.push(
+            { role: 'user', content: currentPrompt },
+            { role: 'assistant', content: modelResponse }
+          );
+        }
+        updated[modelId] = history;
+        return updated;
+      });
+
+    } catch (error) {
+      console.error(`Error regenerating response:`, error);
+    } finally {
+      setRegeneratingModels(prev => prev.filter(i => i !== modelIndex));
+      setStreamingModels(prev => prev.filter(m => m !== provider.nickname));
+    }
+  };
+
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
@@ -617,8 +777,153 @@ export default function SDKPlayground() {
                 >
                   {/* User's prompt speech bubble */}
                   <div className="flex justify-end mb-4">
-                    <div className="max-w-3/4 p-3 rounded bg-gray-100">
-                      <TruncatedText text={conversation.prompt} maxLines={3} />
+                    <div 
+                      className="relative rounded bg-gray-100 group" 
+                      style={{ 
+                        maxWidth: '75%',
+                        width: 'fit-content',
+                        minWidth: 'min-content'
+                      }}
+                    >
+                      {editingPromptIndex === index ? (
+                        <div className="text-sm text-gray-800 p-3">
+                          <div 
+                            className="relative" 
+                            style={{ 
+                              minHeight: bubbleHeights[index] || '24px',
+                              height: 'auto',
+                              width: 'fit-content', // Allow content to determine width
+                              minWidth: '100%' // Ensure it's at least as wide as the original text
+                            }}
+                          >
+                            <textarea
+                              value={editedPrompt}
+                              onChange={(e) => {
+                                setEditedPrompt(e.target.value);
+                                const textarea = e.target;
+                                textarea.style.height = 'auto';
+                                const scrollHeight = textarea.scrollHeight;
+                                const prevHeight = previousHeightRef.current[index] || 24;
+                                
+                                if (scrollHeight !== prevHeight) {
+                                  const newHeight = Math.max(
+                                    bubbleHeights[index] || 24,
+                                    Math.min(scrollHeight, 24 * 3)
+                                  );
+                                  previousHeightRef.current[index] = newHeight;
+                                  setBubbleHeights(prev => ({
+                                    ...prev,
+                                    [index]: newHeight
+                                  }));
+                                }
+                              }}
+                              className="bg-transparent border-none focus:outline-none resize-none text-sm text-gray-800"
+                              style={{
+                                height: bubbleHeights[index] || 'auto',
+                                overflow: 'hidden',
+                                whiteSpace: 'pre-wrap',
+                                wordWrap: 'break-word',
+                                width: '100%',
+                                minWidth: '100%'
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  if (editedPrompt.trim() === '') {
+                                    setEditedPrompt(conversation.prompt);
+                                  }
+                                  setEditingPromptIndex(null);
+                                  if (editedPrompt.trim() !== '') {
+                                    setConversations(prev => {
+                                      const newConversations = [...prev];
+                                      newConversations[index].prompt = editedPrompt;
+                                      return newConversations;
+                                    });
+                                  }
+                                } else if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  setEditedPrompt(conversation.prompt);
+                                  setEditingPromptIndex(null);
+                                }
+                              }}
+                              autoFocus
+                            />
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setEditedPrompt(conversation.prompt);
+                              setEditingPromptIndex(null);
+                            }}
+                            className="absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-zinc-400"
+                            >
+                              <path d="M18 6L6 18" />
+                              <path d="M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-3 transition-[padding] duration-200 group-hover:pr-10">
+                          <TruncatedText 
+                            text={conversation.prompt} 
+                            maxLines={3} 
+                            onHeightChange={(height) => {
+                              const prevHeight = previousHeightRef.current[index];
+                              if (prevHeight !== height) {
+                                previousHeightRef.current[index] = height;
+                                setBubbleHeights(prev => ({
+                                  ...prev,
+                                  [index]: height
+                                }));
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setEditingPromptIndex(index);
+                              setEditedPrompt(conversation.prompt);
+                              setTimeout(() => {
+                                const textarea = document.querySelector('textarea');
+                                if (textarea) {
+                                  textarea.selectionStart = textarea.selectionEnd = conversation.prompt.length;
+                                }
+                              }, 0);
+                            }}
+                            className="absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-zinc-400"
+                            >
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                              <path d="m15 5 4 4"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   {/* AI response cards */}
@@ -632,47 +937,10 @@ export default function SDKPlayground() {
                         isFusionCard={true}
                         fusionResult={conversation.fusionResult}
                         isFusionLoading={isFusionLoading}
+                        showAllModels={showAllModels}
+                        onToggleShowAllModels={() => setShowAllModels(!showAllModels)}
+                        onRegenerate={handleRegenerate}
                       />
-                      <button
-                        onClick={() => setShowAllModels(!showAllModels)}
-                        className="absolute top-5 right-5 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                      >
-                        {showAllModels ? (
-                          <>
-                            Show Less
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="m18 15-6-6-6 6"/>
-                            </svg>
-                          </>
-                        ) : (
-                          <>
-                            Show More
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="m6 9 6 6 6-6"/>
-                            </svg>
-                          </>
-                        )}
-                      </button>
                     </div>
                     
                     {/* Model cards - shared row */}
@@ -685,6 +953,8 @@ export default function SDKPlayground() {
                             models={models} 
                             results={conversation.results} 
                             isStreaming={isStreaming}
+                            onRegenerate={handleRegenerate}
+                            isRegenerating={regeneratingModels.includes(modelIndex)}
                           />
                         ))}
                       </div>
@@ -697,6 +967,7 @@ export default function SDKPlayground() {
                       fusionResult={conversation.fusionResult}
                       isFusionLoading={isFusionLoading}
                       activeButton={activeButton}
+                      onRegenerate={handleRegenerate}
                     />
                   </div>
                 </div>
@@ -707,106 +978,92 @@ export default function SDKPlayground() {
       </main>
 
       {/* Footer with input form */}
-      <footer className="bg-gray-50 border-t border-border px-4 sm:px-10 py-2 z-10">
-        <div className="flex justify-between items-center mb-4">
-          {(isStreaming || isFusionLoading) && (
-            <StreamingStatus 
-              streamingModels={streamingModels} 
-              isFusionLoading={isFusionLoading} 
-              activeButton={activeButton}
-              hasResponses={conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '')}
-            />
-          )}
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4">
-          <div className="w-full">
-            <Input
-              id="message-input"
-              ref={inputRef}
-              value={input}
-              onChange={(e) => {
-                const cursorPosition = e.currentTarget.selectionStart;
-                const textBeforeCursor = e.currentTarget.value.slice(0, cursorPosition);
-                const textAfterCursor = e.currentTarget.value.slice(cursorPosition);
-                const element = e.currentTarget;
-                
-                setInput(e.target.value);
-                element.style.height = 'auto';
-                element.style.height = `${element.scrollHeight}px`;
-                
-                // Restore cursor position after paste
-                requestAnimationFrame(() => {
-                  if (element && document.activeElement === element) {
-                    element.selectionStart = cursorPosition;
-                    element.selectionEnd = cursorPosition;
+      <footer 
+        className="bg-gray-50 border-t border-border px-4 sm:px-10 py-2 z-10"
+        style={{ 
+          minHeight: `${footerHeight}px`,
+          height: 'auto'
+        }}
+      >
+        <div className="footer-content">
+          <div className="flex justify-between items-center mb-4 flex-shrink-0">
+            {(isStreaming || isFusionLoading) && (
+              <StreamingStatus 
+                streamingModels={streamingModels} 
+                isFusionLoading={isFusionLoading} 
+                activeButton={activeButton}
+                hasResponses={conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '')}
+              />
+            )}
+          </div>
+          <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4 w-full">
+            <div className="w-11/12 max-h-[40vh]">
+              <Input
+                id="message-input"
+                ref={inputRef}
+                value={input}
+                onChange={(e) => {
+                  const element = e.currentTarget;
+                  const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
+                  const maxHeight = lineHeight * 5; // Limit to 5 lines
+                  
+                  setInput(e.target.value);
+                  element.style.height = 'auto';
+                  
+                  // Apply max height limit
+                  const newHeight = Math.min(element.scrollHeight, maxHeight);
+                  element.style.height = `${newHeight}px`;
+                  
+                  // Enable/disable scrolling based on content height
+                  if (element.scrollHeight > maxHeight) {
+                    element.style.overflowY = 'auto';
+                  } else {
+                    element.style.overflowY = 'hidden';
                   }
-                });
-              }}
-              onPaste={(e) => {
-                e.preventDefault();
-                const cursorPosition = e.currentTarget.selectionStart;
-                const textBeforeCursor = e.currentTarget.value.slice(0, cursorPosition);
-                const textAfterCursor = e.currentTarget.value.slice(cursorPosition);
-                const pastedText = e.clipboardData.getData('text').replace(/\n/g, ' ');
-                
-                const newValue = textBeforeCursor + pastedText + textAfterCursor;
-                const newCursorPosition = cursorPosition + pastedText.length;
-                
-                setInput(newValue);
-                
-                // Wait for the next render cycle and check if the element exists
-                setTimeout(() => {
-                  if (e.currentTarget) {
-                    e.currentTarget.selectionStart = newCursorPosition;
-                    e.currentTarget.selectionEnd = newCursorPosition;
-                    
-                    // Update height after cursor position is set
-                    e.currentTarget.style.height = 'auto';
-                    e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
-                  }
-                }, 0);
-              }}
-              onSubmit={handleSubmit}
-              placeholder="Enter your message..."
-              leftElement={
-                <button
-                  type="button"
-                  className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors"
-                  onClick={() => {
-                    console.log('Attachment button clicked');
-                  }}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-zinc-500"
+                  
+                  // Maintain cursor position
+                  const cursorPosition = e.currentTarget.selectionStart;
+                  requestAnimationFrame(() => {
+                    if (element && document.activeElement === element) {
+                      element.selectionStart = cursorPosition;
+                      element.selectionEnd = cursorPosition;
+                    }
+                  });
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const cursorPosition = e.currentTarget.selectionStart;
+                  const textBeforeCursor = e.currentTarget.value.slice(0, cursorPosition);
+                  const textAfterCursor = e.currentTarget.value.slice(cursorPosition);
+                  const pastedText = e.clipboardData.getData('text').replace(/\n/g, ' ');
+                  
+                  const newValue = textBeforeCursor + pastedText + textAfterCursor;
+                  const newCursorPosition = cursorPosition + pastedText.length;
+                  
+                  setInput(newValue);
+                  
+                  // Wait for the next render cycle and check if the element exists
+                  setTimeout(() => {
+                    if (e.currentTarget) {
+                      e.currentTarget.selectionStart = newCursorPosition;
+                      e.currentTarget.selectionEnd = newCursorPosition;
+                      
+                      // Update height after cursor position is set
+                      e.currentTarget.style.height = 'auto';
+                      e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                    }
+                  }, 0);
+                }}
+                onSubmit={handleSubmit}
+                placeholder="Enter your message..."
+                leftElement={
+                  <button
+                    type="button"
+                    className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors"
+                    onClick={() => {
+                      console.log('Attachment button clicked');
+                    }}
                   >
-                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                  </svg>
-                </button>
-              }
-              rightElement={
-                <button
-                  type="submit"
-                  disabled={isLoading || input.trim() === ''}
-                  className={cn(
-                    "w-7 h-7 flex items-center justify-center rounded-md transition-colors",
-                    input.trim() !== '' 
-                      ? "bg-zinc-200 hover:bg-zinc-300"
-                      : "bg-zinc-100 hover:bg-zinc-200",
-                    (isLoading || input.trim() === '') && "opacity-100 cursor-not-allowed"
-                  )}
-                >
-                  {isLoading ? (
-                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-transparent"></span>
-                  ) : (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -819,23 +1076,56 @@ export default function SDKPlayground() {
                       strokeLinejoin="round"
                       className="text-zinc-500"
                     >
-                      <path d="M5 12h14" />
-                      <path d="m12 5 7 7-7 7" />
+                      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                     </svg>
-                  )}
-                </button>
-              }
-            />
-          </div>
-          <p className={cn(
-            "text-xs text-gray-500 text-center",
-            !isInitialFooter && "hide-on-mobile"
-          )}>
-            {isInitialFooter
-              ? "By continuing, you agree to our Terms and our Privacy Policy."
-              : "AI make mistakes. That's why we're here for multi-model experiences."}
-          </p>
-        </form>
+                  </button>
+                }
+                rightElement={
+                  <button
+                    type="submit"
+                    disabled={isLoading || input.trim() === ''}
+                    className={cn(
+                      "w-7 h-7 flex items-center justify-center rounded-md transition-colors",
+                      input.trim() !== '' 
+                        ? "bg-zinc-200 hover:bg-zinc-300"
+                        : "bg-zinc-100 hover:bg-zinc-200",
+                      (isLoading || input.trim() === '') && "opacity-100 cursor-not-allowed"
+                    )}
+                  >
+                    {isLoading ? (
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-transparent"></span>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-zinc-500"
+                      >
+                        <path d="M5 12h14" />
+                        <path d="m12 5 7 7-7 7" />
+                      </svg>
+                    )}
+                  </button>
+                }
+              />
+            </div>
+            <p className={cn(
+              "text-xs text-gray-500 flex-shrink-0 pb-2",
+              !isInitialFooter && "hide-on-mobile"
+            )}>
+              {isInitialFooter
+                ? "By continuing, you agree to our Terms and our Privacy Policy."
+                : "AI make mistakes. That's why we're here for multi-model experiences."}
+            </p>
+            {!isInitialFooter && <div className="h-6 sm:hidden" />}
+          </form>
+        </div>
       </footer>
     </div>
   );
