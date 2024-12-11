@@ -17,7 +17,7 @@ import React from 'react';
 const Select = dynamic(() => import('@/components/ui/select').then(mod => mod.Select), {
   ssr: false,
   loading: () => (
-    <div className="h-8 w-24 bg-zinc-100 animate-pulse rounded-md"></div>
+    <div className="h-8 w-24 bg-white border border-zinc-200 rounded-md"></div>
   )
 });
 
@@ -174,7 +174,7 @@ const Header = ({ mode, onModeChange, onNewChat }: {
         </Select>
         <div className="hidden sm:block">
           <Button variant="outline" size="xs" className="text-xs group relative">
-            v2.1
+            v2.2
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
               <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
               <ul className="list-disc list-inside text-left">
@@ -295,6 +295,120 @@ export default function SDKPlayground() {
     });
   };
 
+  // Move fetchModelResponse outside handleSubmit but inside SDKPlayground
+  const fetchModelResponse = async (index: number, currentInput: string) => {
+    const modelId = models[index];
+    const provider = getProviderForModel(modelId);
+    if (!provider) return;
+
+    setStreamingModels(prev => [...prev, provider.nickname]);
+
+    try {
+      console.log(`Sending request for model: ${modelId}`);
+      
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: currentInput,
+          sessionId,
+          conversationHistories,
+          selectedModel: modelId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate response');
+      }
+
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      let modelResponse = '';
+      let fullResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        fullResponse += chunk;
+
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5));
+              if (data.content) {
+                modelResponse += data.content;
+                setConversations(prev => {
+                  const newConversations = [...prev];
+                  newConversations[newConversations.length - 1].results[index] = modelResponse;
+                  console.log(`Updated conversation for ${modelId}:`, newConversations);
+                  return newConversations;
+                });
+              } else if (data.error) {
+                throw new Error(data.error);
+              }
+            } catch (error) {
+              console.error('Error parsing JSON:', error);
+            }
+          }
+        }
+      }
+
+      console.log(`Full API response for ${modelId}:`, fullResponse);
+
+      // Update conversation histories
+      setConversationHistories(prev => {
+        const history = prev[modelId] || [];
+        const newHistory = [...history];
+        
+        // If this is a new conversation
+        if (history.length === 0) {
+          newHistory.push(
+            { role: 'user', content: currentInput },
+            { role: 'assistant', content: modelResponse }
+          );
+        } else {
+          // Update or append the latest exchange
+          if (history[history.length - 1].role === 'assistant') {
+            // If the last message was from assistant, add new user message and response
+            newHistory.push(
+              { role: 'user', content: currentInput },
+              { role: 'assistant', content: modelResponse }
+            );
+          } else {
+            // If the last message was from user, append assistant response
+            newHistory.push({ role: 'assistant', content: modelResponse });
+          }
+        }
+
+        return {
+          ...prev,
+          [modelId]: newHistory
+        };
+      });
+
+      return modelResponse;
+    } catch (error) {
+      console.error(`Error fetching response for ${modelId}:`, error);
+      setConversations(prev => {
+        const newConversations = [...prev];
+        newConversations[newConversations.length - 1].results[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
+        console.log(`Error updating conversation for ${modelId}:`, newConversations);
+        return newConversations;
+      });
+      return '';
+    } finally {
+      setStreamingModels(prev => prev.filter(m => m !== provider.nickname));
+    }
+  };
+
   // Handle form submission and fetch responses from selected models
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -329,122 +443,8 @@ export default function SDKPlayground() {
       return newConversations;
     });
 
-    // Function to fetch response for a single model
-    const fetchModelResponse = async (index: number) => {
-      const modelId = models[index];
-      const provider = getProviderForModel(modelId);
-      if (!provider) return;
-
-      setStreamingModels(prev => [...prev, provider.nickname]);
-
-      try {
-        console.log(`Sending request for model: ${modelId}`);
-        
-        const response = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: currentInput,
-            sessionId,
-            conversationHistories,
-            selectedModel: modelId,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to generate response');
-        }
-
-        if (!response.body) {
-          throw new Error('Response body is null');
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-
-        let modelResponse = '';
-        let fullResponse = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          fullResponse += chunk;
-
-          const lines = chunk.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(5));
-                if (data.content) {
-                  modelResponse += data.content;
-                  setConversations(prev => {
-                    const newConversations = [...prev];
-                    newConversations[newConversations.length - 1].results[index] = modelResponse;
-                    console.log(`Updated conversation for ${modelId}:`, newConversations);
-                    return newConversations;
-                  });
-                } else if (data.error) {
-                  throw new Error(data.error);
-                }
-              } catch (error) {
-                console.error('Error parsing JSON:', error);
-              }
-            }
-          }
-        }
-
-        console.log(`Full API response for ${modelId}:`, fullResponse);
-
-        // Update conversation histories
-        setConversationHistories(prev => {
-          const history = prev[modelId] || [];
-          const newHistory = [...history];
-          
-          // If this is a new conversation
-          if (history.length === 0) {
-            newHistory.push(
-              { role: 'user', content: currentInput },
-              { role: 'assistant', content: modelResponse }
-            );
-          } else {
-            // Update or append the latest exchange
-            if (history[history.length - 1].role === 'assistant') {
-              // If the last message was from assistant, add new user message and response
-              newHistory.push(
-                { role: 'user', content: currentInput },
-                { role: 'assistant', content: modelResponse }
-              );
-            } else {
-              // If the last message was from user, append assistant response
-              newHistory.push({ role: 'assistant', content: modelResponse });
-            }
-          }
-
-          return {
-            ...prev,
-            [modelId]: newHistory
-          };
-        });
-
-        return modelResponse;
-      } catch (error) {
-        console.error(`Error fetching response for ${modelId}:`, error);
-        setConversations(prev => {
-          const newConversations = [...prev];
-          newConversations[newConversations.length - 1].results[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
-          console.log(`Error updating conversation for ${modelId}:`, newConversations);
-          return newConversations;
-        });
-        return '';
-      } finally {
-        setStreamingModels(prev => prev.filter(m => m !== provider.nickname));
-      }
-    };
-
     // Fetch responses from all models simultaneously
-    const responses = await Promise.all(models.map((_, index) => fetchModelResponse(index)));
+    const responses = await Promise.all(models.map((_, index) => fetchModelResponse(index, currentInput)));
 
     // Update conversation histories
     const updatedConversationHistories = { ...conversationHistories };
@@ -544,7 +544,7 @@ export default function SDKPlayground() {
     console.log('Latest responses for fusion:', latestResponses);
 
     const prePrompts = {
-      "Multi-Model Response": "Instruction: Response in the language as the ask and the responses. Based on the ask, use only 1 of the 2 modes that would provide the most optimal output: synethsis, or create. There is no need to state explicitly which mode you are using in the response. If there is minimal to no value add in synthesizing, nor is the ask related to create/generate - use the 3rd mode - follow up. Each mode corresponds to a set of requirements.\\n\\n1.Synthesis: 'Prioritize key information in your answer. Analyze and synthesize the responses from three different persons to the ask\\n\\nYour synthesis should:\\n\\n- provide answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models\\n- use bold and/or bullet points where appropriate\\n- highlight discrepancies between responses (and refer to the person) if relevant, you may present this via table if deemed useful; \\n- you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question'\\n\\n2.Create: 'Take all 3 responses and merge into 1 single output in respond to the ask. It should:\\n\\n- Prioritse the exact ask\\n- Consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one\\n- You may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the ask\\n- Do not state the source, or mention Anny, Ben, and Clarice'\\n\\n- For both modes, add a divider after the output, and have footnotes of which parts were contributed by which response.\\n\\n3.Follow Up: 'Since no value add in synthesizing/creating, simply respond to the ask, followed by some sort of follow up. No mention of name of response. No footnote or divider allowed.'",    };
+      "Multi-Model Response": "Instruction: Response in the language as the ask and the responses. Based on the ask, use only 1 of the 2 modes that would provide the most optimal output: synethsis, or create. There is no need to state explicitly which mode you are using in the response. If there is minimal to no value add in synthesizing, nor is the ask related to create/generate - use the 3rd mode - follow up. Each mode corresponds to a set of requirements.\\n\\n1.Synthesis: 'Prioritize key information in your answer. Analyze and synthesize the responses from three different persons to the ask\\n\\nYour synthesis should:\\n\\n- provide answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models\\n- use bold and/or bullet points where appropriate\\n- highlight discrepancies between responses (and refer to the person) if relevant, you may present this via table if deemed useful; \\n- you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question'\\n\\n2.Create: 'Take all 3 responses and merge into 1 single output in respond to the ask. It should:\\n\\n- Prioritse the exact ask\\n- Consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one\\n- You may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the ask\\n- Do not state the source, or mention Anny, Ben, and Clarice'\\n\\n- For both modes, add a divider after the output, and have footnotes of which parts were contributed by which response in italics.\\n\\n3.Follow Up: 'Since no value add in synthesizing/creating, simply respond to the ask, followed by some sort of follow up. No mention of name of response. No footnote or divider allowed.'",    };
 
     const fusionModel = 'gpt-4o-2024-08-06';
       
@@ -750,16 +750,11 @@ export default function SDKPlayground() {
       setConversationHistories(prev => {
         const updated = { ...prev };
         if (updated[modelId]?.length >= 2) {
-          // Replace the last assistant response
-          updated[modelId] = updated[modelId].slice(0, -1);
-          updated[modelId].push({ role: 'assistant', content: modelResponse });
-        } else {
-          // Add new conversation pair
-          updated[modelId] = [
-            ...(updated[modelId] || []),
-            { role: 'user', content: currentPrompt },
-            { role: 'assistant', content: modelResponse }
-          ];
+          // Find the last assistant message and update its content
+          const lastAssistantIndex = updated[modelId].findLastIndex(msg => msg.role === 'assistant');
+          if (lastAssistantIndex !== -1) {
+            updated[modelId][lastAssistantIndex].content = modelResponse;
+          }
         }
         return updated;
       });
@@ -771,6 +766,10 @@ export default function SDKPlayground() {
       setStreamingModels(prev => prev.filter(m => m !== provider.nickname));
     }
   };
+
+  useEffect(() => {
+    console.log('All Conversation Histories:', JSON.stringify(conversationHistories, null, 2));
+  }, [conversationHistories]);
 
   // Render the user interface with header, main content, and footer
   return (
@@ -805,6 +804,7 @@ export default function SDKPlayground() {
                     prompt={conversation.prompt}
                     index={index}
                     isEditing={editingPromptIndex === index}
+                    isLatestPrompt={index === conversations.length - 1}
                     onEditStart={() => {
                       setEditingPromptIndex(index);
                       setEditedPrompt(conversation.prompt);
@@ -823,23 +823,47 @@ export default function SDKPlayground() {
                       setEditedPrompt('');
                     }}
                     onRegenerateFromEdit={(newPrompt, promptIndex) => {
-                      // Update the prompt first
-                      setConversations(prev => {
-                        const newConversations = [...prev];
-                        newConversations[promptIndex].prompt = newPrompt;
-                        return newConversations;
-                      });
-                      
-                      // Clear previous results for this conversation
-                      setConversations(prev => {
-                        const newConversations = [...prev];
-                        newConversations[promptIndex].results = ['', '', ''];
-                        newConversations[promptIndex].fusionResult = '';
-                        return newConversations;
+                      // First, remove the last exchange from conversation histories
+                      setConversationHistories(prev => {
+                        const updated = { ...prev };
+                        models.forEach(modelId => {
+                          const history = updated[modelId] || [];
+                          if (history.length >= 2) {
+                            // Remove the last user-assistant pair
+                            updated[modelId] = history.slice(0, -2);
+                          }
+                        });
+                        return updated;
                       });
 
-                      // Regenerate responses with the new prompt
-                      handleRegenerate(null);
+                      // Now treat it as a new prompt by calling fetchModelResponse
+                      const fetchResponses = async () => {
+                        // Wait for all model responses to complete
+                        const responses = await Promise.all(models.map((_, index) => fetchModelResponse(index, newPrompt)));
+                        
+                        // Update conversations with all responses first
+                        setConversations(prev => {
+                          const newConversations = [...prev];
+                          newConversations[promptIndex].results = responses.filter(response => response !== undefined) as string[];
+                          return newConversations;
+                        });
+
+                        // After responses are updated in state, add new exchange to histories
+                        const updatedHistories = { ...conversationHistories };
+                        models.forEach((modelId, idx) => {
+                          const history = updatedHistories[modelId] || [];
+                          history.push(
+                            { role: 'user', content: newPrompt },
+                            { role: 'assistant', content: responses[idx] || '' }
+                          );
+                          updatedHistories[modelId] = history;
+                        });
+
+                        // Now trigger fusion with the updated histories
+                        handleFusion('Multi-Model Response', true, updatedHistories);
+                      };
+
+                      fetchResponses();
                     }}
                   />
                   {/* AI response cards */}

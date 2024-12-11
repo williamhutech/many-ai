@@ -5,6 +5,7 @@ interface UserPromptBubbleProps {
   prompt: string;
   index: number;
   isEditing: boolean;
+  isLatestPrompt?: boolean;
   onEditStart: () => void;
   onEditCancel: () => void;
   onEditComplete?: (newPrompt: string) => void;
@@ -15,6 +16,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
   prompt,
   index,
   isEditing,
+  isLatestPrompt,
   onEditStart,
   onEditCancel,
   onEditComplete,
@@ -32,27 +34,29 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
 
   const calculateOptimalWidth = (text: string, forceHoverState?: boolean) => {
     const maxWidth = window.innerWidth * 0.75;
+    const isMobile = window.innerWidth <= 768;
     
     const span = document.createElement('span');
     span.style.visibility = 'hidden';
     span.style.position = 'absolute';
     span.style.whiteSpace = 'pre-wrap';
-    span.style.fontSize = '14px';
+    span.style.fontSize = isMobile ? '16px' : '14px';
     span.style.padding = '12px';
     span.style.lineHeight = '1.5';
     span.style.wordBreak = 'break-all';
     span.style.maxWidth = `${maxWidth}px`;
+    span.style.display = 'inline-block';
     span.textContent = text;
     document.body.appendChild(span);
     
     const textWidth = span.offsetWidth;
     document.body.removeChild(span);
     
-    // Always include button padding in edit mode
-    const padding = isEditing || forceHoverState ? 64 : 24;
-    const optimalWidth = textWidth + padding;
+    const bufferSpace = (!isEditing && !forceHoverState && !isMobile) ? 6 : 0;
+    const extraPadding = (isEditing || (isLatestPrompt && forceHoverState && !isMobile)) ? 36 : 0;
+    const optimalWidth = textWidth + extraPadding + bufferSpace;
     
-    if (text.length < 50) {
+    if (text.length < 50 && !isMobile) {
       return `${Math.min(optimalWidth, maxWidth * 0.4)}px`;
     }
     
@@ -211,7 +215,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
         ) : (
           <div className="p-3 relative">
             <div 
-              className="text-sm text-gray-800"
+              className="text-sm text-gray-800 mobile-text"
               style={{
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-all',
@@ -222,7 +226,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
                 lineHeight: '1.5',
                 textAlign: 'justify',
                 textJustify: 'inter-word',
-                paddingRight: isHovered ? '40px' : '0',
+                paddingRight: isLatestPrompt && (isHovered || window.innerWidth <= 768) ? '36px' : '0',
                 transition: 'padding-right 0.2s ease-out'
               }}
             >
@@ -230,7 +234,14 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
             </div>
             <button
               onClick={onEditStart}
-              className="absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 bg-gray-100"
+              className={cn(
+                "absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200 bg-gray-100",
+                isLatestPrompt 
+                  ? window.innerWidth <= 768 
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                  : "hidden"
+              )}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
