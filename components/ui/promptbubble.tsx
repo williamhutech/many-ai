@@ -192,12 +192,12 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
                 height: '24px',
                 overflow: 'hidden',
                 whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
+                wordBreak: 'break-word',
                 display: '-webkit-box',
                 WebkitLineClamp: '3',
                 WebkitBoxOrient: 'vertical',
                 lineHeight: '1.5',
-                paddingRight: isHovered ? '40px' : '0',
+                paddingRight: isHovered ? '48px' : '8px',
               }}
               autoFocus
             />
@@ -227,7 +227,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
               className="text-sm text-gray-800 mobile-text"
               style={{
                 whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
+                wordBreak: 'break-word',
                 overflow: 'hidden',
                 display: '-webkit-box',
                 WebkitLineClamp: '3',
@@ -235,7 +235,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
                 lineHeight: '1.5',
                 textAlign: 'justify',
                 textJustify: 'inter-word',
-                paddingRight: isLatestPrompt && (isHovered || window.innerWidth <= 768) ? '36px' : '0',
+                paddingRight: isLatestPrompt && (isHovered || window.innerWidth <= 768) ? '30px' : '0px',
                 transition: 'padding-right 0.2s ease-out'
               }}
             >

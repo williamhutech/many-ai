@@ -13,35 +13,7 @@ import { getDefaultModels } from '@/config/models';
 import MobileResultCarousel from '@/components/pages/mobileresultcarousel';
 import dynamic from 'next/dynamic';
 import React from 'react';
-
-const Select = dynamic(() => import('@/components/ui/select').then(mod => mod.Select), {
-  ssr: false,
-  loading: () => (
-    <div className="h-8 w-24 bg-white border border-zinc-200 rounded-md"></div>
-  )
-});
-
-const SelectTrigger = dynamic(() => import('@/components/ui/select').then(mod => mod.SelectTrigger), {
-  ssr: false
-});
-
-const SelectContent = dynamic(() => import('@/components/ui/select').then(mod => mod.SelectContent), {
-  ssr: false
-});
-
-const SelectItem = dynamic(() => import('@/components/ui/select').then(mod => mod.SelectItem), {
-  ssr: false
-});
-
-const preloadSelectComponents = () => {
-  const selectPromise = import('@/components/ui/select');
-  selectPromise.then(mod => {
-    mod.Select;
-    mod.SelectTrigger;
-    mod.SelectContent;
-    mod.SelectItem;
-  });
-};
+import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 
 const Header = ({ mode, onModeChange, onNewChat }: { 
   mode: 'fast' | 'smart', 
@@ -160,7 +132,6 @@ const Header = ({ mode, onModeChange, onNewChat }: {
         >
           <SelectTrigger 
             className="h-8 text-xs border border-zinc-200 bg-white w-auto px-3 font-inter"
-            onMouseEnter={preloadSelectComponents}
           >
             {mounted ? (mode === 'fast' ? 'Fast Model' : 'Smart Model') : ''}
           </SelectTrigger>
