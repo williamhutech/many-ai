@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { getProviderForModel } from '@/config/models';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import * as amplitude from '@amplitude/analytics-browser';
 
 interface ResultCardProps {
   index: number;
@@ -57,6 +58,13 @@ export const ResultCard: React.FC<ResultCardProps> =
       try {
         await navigator.clipboard.writeText(contentToCopy.trim());
         setHasCopied(true);
+        
+        // Track copy event
+        amplitude.track('Response Copied', {
+          isFusionCard,
+          contentLength: contentToCopy.trim().length,
+          modelName: isFusionCard ? 'ManyAI' : selectedProvider?.nickname
+        });
       } catch (err) {
         console.error('Failed to copy text:', err);
       }
@@ -89,6 +97,16 @@ export const ResultCard: React.FC<ResultCardProps> =
         </div>
       </div>
     );
+
+    const handleToggleShowAllModels = () => {
+      amplitude.track('Toggle Model View', {
+        action: showAllModels ? 'show_less' : 'show_more',
+        modelCount: models.length,
+      });
+      if (onToggleShowAllModels) {
+        onToggleShowAllModels();
+      }
+    };
 
     return (
       <Card className="flex flex-col h-full">

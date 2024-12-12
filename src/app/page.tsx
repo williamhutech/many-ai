@@ -57,6 +57,13 @@ const Header = ({ mode, onModeChange, onNewChat }: {
   const handleModeChange = (newMode: string) => {
     const modeValue = newMode === 'Fast Model' ? 'fast' : 'smart';
     localStorage.setItem('modelMode', modeValue);
+    
+    // Track mode change event
+    amplitude.track('Mode Changed', {
+      previousMode: mode,
+      newMode: modeValue,
+    });
+    
     onModeChange(modeValue);
   };
 
@@ -303,9 +310,7 @@ export default function SDKPlayground() {
 
     setStreamingModels(prev => [...prev, provider.nickname]);
 
-    try {
-      console.log(`Sending request for model: ${modelId}`);
-      
+    try {      
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -348,7 +353,6 @@ export default function SDKPlayground() {
                 setConversations(prev => {
                   const newConversations = [...prev];
                   newConversations[newConversations.length - 1].results[index] = modelResponse;
-                  console.log(`Updated conversation for ${modelId}:`, newConversations);
                   return newConversations;
                 });
               } else if (data.error) {
@@ -360,8 +364,6 @@ export default function SDKPlayground() {
           }
         }
       }
-
-      console.log(`Full API response for ${modelId}:`, fullResponse);
 
       // Update conversation histories
       setConversationHistories(prev => {
@@ -400,7 +402,6 @@ export default function SDKPlayground() {
       setConversations(prev => {
         const newConversations = [...prev];
         newConversations[newConversations.length - 1].results[index] = `Error: ${error instanceof Error ? error.message : 'Failed to fetch response'}`;
-        console.log(`Error updating conversation for ${modelId}:`, newConversations);
         return newConversations;
       });
       return '';
@@ -462,7 +463,6 @@ export default function SDKPlayground() {
     setConversations(prev => {
       const newConversations = [...prev];
       newConversations[newConversations.length - 1].results = responses.filter((response): response is string => response !== undefined);
-      console.log('Final updated conversations:', newConversations);
       return newConversations;
     });
 
@@ -470,6 +470,13 @@ export default function SDKPlayground() {
     handleFusion('Multi-Model Response', true, updatedConversationHistories);
 
     setIsLoading(false);
+
+    // Track prompt submission
+    amplitude.track('Prompt Submitted', {
+      promptLength: currentInput.trim().length,
+      modelCount: models.length,
+      mode: mode
+    });
   };
 
   useEffect(() => {
@@ -540,17 +547,12 @@ export default function SDKPlayground() {
       historiesForFusion[modelId]?.slice(-1)[0]?.content || ''
     );
 
-    console.log('Latest prompt for fusion:', latestPrompt);
-    console.log('Latest responses for fusion:', latestResponses);
-
     const prePrompts = {
       "Multi-Model Response": "Instruction: Response in the language as the ask and the responses. Based on the ask, use only 1 of the 2 modes that would provide the most optimal output: synethsis, or create. There is no need to state explicitly which mode you are using in the response. If there is minimal to no value add in synthesizing, nor is the ask related to create/generate - use the 3rd mode - follow up. Each mode corresponds to a set of requirements.\\n\\n1.Synthesis: 'Prioritize key information in your answer. Analyze and synthesize the responses from three different persons to the ask\\n\\nYour synthesis should:\\n\\n- provide answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models\\n- use bold and/or bullet points where appropriate\\n- highlight discrepancies between responses (and refer to the person) if relevant, you may present this via table if deemed useful; \\n- you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question'\\n\\n2.Create: 'Take all 3 responses and merge into 1 single output in respond to the ask. It should:\\n\\n- Prioritse the exact ask\\n- Consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one\\n- You may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the ask\\n- Do not state the source, or mention Anny, Ben, and Clarice'\\n\\n- For both modes, add a divider after the output, and have footnotes of which parts were contributed by which response in italics.\\n\\n3.Follow Up: 'Since no value add in synthesizing/creating, simply respond to the ask, followed by some sort of follow up. No mention of name of response. No footnote or divider allowed.'",    };
 
     const fusionModel = 'gpt-4o-2024-08-06';
       
     const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Ask: ${latestPrompt}\n\nAnny: ${latestResponses[0]}\nBen: ${latestResponses[1]}\nClarice: ${latestResponses[2]}`;
-
-    console.log('Fusion prompt:', prompt);
 
     try {
       const response = await fetch('/api/generate', {
@@ -637,7 +639,7 @@ export default function SDKPlayground() {
     setSessionId(newSessionId);
     
     // Track new chat event
-    amplitude.track('New Chat Started');
+    amplitude.track('New Chat');
   };
 
   React.useEffect(() => {
@@ -653,6 +655,12 @@ export default function SDKPlayground() {
   }, []);
 
   const handleRegenerate = async (modelIndex: number | null) => {
+    // Track regeneration event
+    amplitude.track('Answer Regenerated', {
+      modelIndex: modelIndex,
+      isFusion: modelIndex === null,
+      mode: mode
+    });
     if (!sessionId || conversations.length === 0) return;
     
     const currentConversation = conversations[conversations.length - 1];
@@ -767,10 +775,6 @@ export default function SDKPlayground() {
     }
   };
 
-  useEffect(() => {
-    console.log('All Conversation Histories:', JSON.stringify(conversationHistories, null, 2));
-  }, [conversationHistories]);
-
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
@@ -862,7 +866,6 @@ export default function SDKPlayground() {
                         // Now trigger fusion with the updated histories
                         handleFusion('Multi-Model Response', true, updatedHistories);
                       };
-
                       fetchResponses();
                     }}
                   />

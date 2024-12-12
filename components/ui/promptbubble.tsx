@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import * as amplitude from '@amplitude/analytics-browser';
 
 interface UserPromptBubbleProps {
   prompt: string;
@@ -105,6 +106,14 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     }
     setIsHovered(false);
     setBubbleWidth(calculateOptimalWidth(trimmedPrompt, false));
+  };
+
+  const handleEditStart = () => {
+    amplitude.track('Editing Prompt', {
+      promptLength: prompt.length,
+      isLatestPrompt
+    });
+    onEditStart();
   };
 
   useEffect(() => {
@@ -233,7 +242,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
               {prompt}
             </div>
             <button
-              onClick={onEditStart}
+              onClick={handleEditStart}
               className={cn(
                 "absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200 bg-gray-100",
                 isLatestPrompt 

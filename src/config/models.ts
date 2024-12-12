@@ -234,7 +234,6 @@ export const getDefaultModels = (mode: 'fast' | 'smart'): string[] => {
   const providers = ['Anthropic', 'Google', 'OpenAI'];
   const models = providers.map(provider => {
     const model = getModelByProviderAndMode(provider, mode);
-    console.log(`Selected ${mode} model for ${provider}:`, model?.displayName); // Debug log
     return model?.id || '';
   });
   return models.filter(id => id !== '');
