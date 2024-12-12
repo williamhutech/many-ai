@@ -53,20 +53,89 @@ export const ResultCard: React.FC<ResultCardProps> =
 
     const handleCopy = async () => {
       if (!currentResult) return;
-      const contentToCopy = currentResult.split('---')[0];
       
       try {
-        await navigator.clipboard.writeText(contentToCopy.trim());
+        // Create temporary container for HTML conversion
+        const container = document.createElement('div');
+        const tempDiv = document.createElement('div');
+        document.body.appendChild(tempDiv); // Temporarily add to DOM
+        
+        // Convert Markdown to formatted text while preserving formatting
+        let formattedText = currentResult
+          // Preserve paragraphs first (convert double newlines to <p> tags)
+          .replace(/\n\s*\n/g, '</p><p>')
+          // Convert bold
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          // Convert italic
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/_(.*?)_/g, '<em>$1</em>')
+          // Convert headers with proper spacing - using temp element for proper parsing
+          .replace(/^# (.*$)/gm, (match, p1) => {
+            tempDiv.innerHTML = `<div style="font-size: 2em; font-weight: bold; margin: 0.67em 0;">${p1}</div>`;
+            return tempDiv.innerHTML;
+          })
+          .replace(/^## (.*$)/gm, (match, p1) => {
+            tempDiv.innerHTML = `<div style="font-size: 1.5em; font-weight: bold; margin: 0.83em 0;">${p1}</div>`;
+            return tempDiv.innerHTML;
+          })
+          .replace(/^### (.*$)/gm, (match, p1) => {
+            tempDiv.innerHTML = `<div style="font-size: 1.17em; font-weight: bold; margin: 1em 0;">${p1}</div>`;
+            return tempDiv.innerHTML;
+          })
+          // Convert blockquotes with spacing
+          .replace(/^\> (.*$)/gm, '<blockquote>$1</blockquote><br>')
+          // Convert code blocks with spacing
+          .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre><br>')
+          .replace(/`(.*?)`/g, '<code>$1</code>')
+          // Convert lists with proper spacing
+          .replace(/^\- (.*$)/gm, '<li>$1</li>')
+          .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+          // Wrap lists in ul/ol tags
+          .replace(/(<li>.*<\/li>)\n/g, '<ul>$1</ul><br>')
+          // Convert links
+          .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>')
+          // Handle single line breaks
+          .replace(/([^\n])\n([^\n])/g, '$1<br>$2')
+          // Normalize spacing between elements
+          .replace(/>(\s*)</g, '>\n<')
+          // Wrap in paragraph if not already wrapped
+          .replace(/^(.+?)$/, '<p>$1</p>');
+
+        // Clean up any empty paragraphs
+        formattedText = formattedText
+          .replace(/<p>\s*<\/p>/g, '')
+          .replace(/<br>\s*<br>/g, '<br>');
+
+        // Clean up temp element
+        document.body.removeChild(tempDiv);
+
+        // Set the HTML content
+        container.innerHTML = formattedText;
+
+        // Create a clipboard item with both HTML and plain text formats
+        const clipboardItem = new ClipboardItem({
+          'text/html': new Blob([container.innerHTML], { type: 'text/html' }),
+          'text/plain': new Blob([container.textContent || ''], { type: 'text/plain' })
+        });
+
+        await navigator.clipboard.write([clipboardItem]);
         setHasCopied(true);
         
         // Track copy event
         amplitude.track('Response Copied', {
           isFusionCard,
-          contentLength: contentToCopy.trim().length,
+          contentLength: formattedText.length,
           modelName: isFusionCard ? 'ManyAI' : selectedProvider?.nickname
         });
       } catch (err) {
-        console.error('Failed to copy text:', err);
+        // Fallback to plain text if rich copy fails
+        try {
+          const plainText = currentResult.replace(/\*\*/g, '').replace(/\*/g, '');
+          await navigator.clipboard.writeText(plainText);
+          setHasCopied(true);
+        } catch (fallbackErr) {
+          console.error('Failed to copy text:', err);
+        }
       }
     };
 
