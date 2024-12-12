@@ -115,11 +115,22 @@ footer {
 
 .streaming-status {
   position: absolute;
-  top: -24px;
-  left: 0;
-  width: 100%;
-  min-height: 20px;
-  background: transparent;
+  bottom: calc(var(--footer-height) + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  padding: 4px;
+  z-index: 49;
+  max-width: 90vw;
+  white-space: nowrap;
+  overflow-x: auto;
+  -ms-overflow-style: none;  /* Hide scrollbar IE and Edge */
+  scrollbar-width: none;  /* Hide scrollbar Firefox */
+}
+
+.streaming-status::-webkit-scrollbar {
+  display: none;  /* Hide scrollbar Chrome, Safari and Opera */
 }
 
 /* Add padding container for input */
@@ -164,7 +175,7 @@ footer {
   }
   
   .streaming-status {
-    top: -20px;
+    bottom: calc(var(--footer-height) + env(safe-area-inset-bottom) + 6px);
   }
 }
 
