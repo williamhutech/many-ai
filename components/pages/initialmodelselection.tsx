@@ -1,16 +1,18 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Card } from '@/components/ui/card';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { getAllModels, Model, getProviderForModel, aiProviders } from '@/config/models';
+import { getAllModels, getProviderForModel, getModelByProviderAndMode, aiProviders, Model, getDefaultModels } from '@/config/models';
 import Image from 'next/image';
 
 interface InitialModelSelectionProps {
   models: string[];
-  handleModelChange: (index: number, value: string) => void;
+  setModels: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
-const InitialModelSelectionComponent: React.FC<InitialModelSelectionProps> = ({ models, handleModelChange }) => {
+const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, setModels }) => {
   const [modelOptions, setModelOptions] = useState<Model[]>([]);
+
+  // Define the fixed provider order
+  const providerOrder = ['Anthropic', 'OpenAI', 'Google', 'Together AI'];
 
   useEffect(() => {
     const loadModels = async () => {
@@ -20,6 +22,17 @@ const InitialModelSelectionComponent: React.FC<InitialModelSelectionProps> = ({ 
     loadModels();
   }, []);
 
+  useEffect(() => {
+    const savedModels = JSON.parse(localStorage.getItem('selectedModels') || '[]');
+
+    if (savedModels.length > 0) {
+      setModels(sortModels(savedModels.slice(0, 3)));
+    } else {
+      const savedMode = localStorage.getItem('modelMode') as 'fast' | 'smart';
+      setModels(getDefaultModels(savedMode || 'fast'));
+    }
+  }, []);
+
   const isProviderSelected = (providerName: string) => {
     return models.some(modelId => {
       const provider = getProviderForModel(modelId);
@@ -27,28 +40,51 @@ const InitialModelSelectionComponent: React.FC<InitialModelSelectionProps> = ({ 
     });
   };
 
+  // Helper function to sort models based on providerOrder
+  const sortModels = (modelsToSort: string[]): string[] => {
+    return providerOrder
+      .map(providerName => {
+        return modelsToSort.find(modelId => {
+          const modelProvider = getProviderForModel(modelId);
+          return modelProvider?.name === providerName;
+        });
+      })
+      .filter(Boolean) as string[];
+  };
+
   const handleProviderToggle = (providerName: string) => {
     const provider = aiProviders.find(p => p.name === providerName);
     if (!provider) return;
 
-    const currentIndex = models.findIndex(modelId => {
-      const modelProvider = getProviderForModel(modelId);
-      return modelProvider?.name === providerName;
-    });
+    const isSelected = isProviderSelected(providerName);
 
-    if (currentIndex === -1) {
-      // Find first available slot
-      const emptyIndex = models.findIndex(model => !model);
-      if (emptyIndex !== -1) {
-        // Select the first enabled model from this provider
-        const firstEnabledModel = provider.models.find(m => m.enabled);
-        if (firstEnabledModel) {
-          handleModelChange(emptyIndex, firstEnabledModel.id);
-        }
-      }
+    if (isSelected) {
+      // Deselect the provider by removing its model from the models array
+      setModels(prevModels => {
+        const updatedModels = prevModels.filter(modelId => {
+          const modelProvider = getProviderForModel(modelId);
+          return modelProvider?.name !== providerName;
+        });
+        // Return sorted models according to providerOrder
+        return sortModels(updatedModels);
+      });
     } else {
-      // Deselect by setting empty string
-      handleModelChange(currentIndex, '');
+      // Enforce maximum of 3 providers
+      if (models.length >= 3) {
+        alert('You can select up to 3 AI providers.');
+        return;
+      }
+
+      // Select the model for the current mode
+      const currentMode = (localStorage.getItem('modelMode') as 'fast' | 'smart') || 'fast';
+      const model = getModelByProviderAndMode(providerName, currentMode);
+      if (model) {
+        setModels(prevModels => {
+          const updatedModels = [...prevModels, model.id];
+          // Return sorted models according to providerOrder
+          return sortModels(updatedModels);
+        });
+      }
     }
   };
 
@@ -58,7 +94,7 @@ const InitialModelSelectionComponent: React.FC<InitialModelSelectionProps> = ({ 
         Select AI Models to Use for ManyAI:
       </h2>
       <div className="flex gap-4 flex-wrap justify-center">
-        {['Anthropic', 'OpenAI', 'Google'].map((providerName) => {
+        {providerOrder.map((providerName) => {
           const provider = aiProviders.find(p => p.name === providerName);
           const isSelected = isProviderSelected(providerName);
 
@@ -112,9 +148,4 @@ const InitialModelSelectionComponent: React.FC<InitialModelSelectionProps> = ({ 
   );
 };
 
-InitialModelSelectionComponent.displayName = 'InitialModelSelection';
-
-const InitialModelSelection = React.memo(InitialModelSelectionComponent);
-InitialModelSelection.displayName = 'InitialModelSelection';
-
-export default InitialModelSelection;
+export default React.memo(InitialModelSelection);

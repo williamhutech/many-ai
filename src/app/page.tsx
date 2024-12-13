@@ -170,6 +170,21 @@ const Header = ({ mode, onModeChange, onNewChat }: {
   );
 };
 
+// Define the fixed provider order
+const providerOrder = ['Anthropic', 'OpenAI', 'Google', 'Together AI'];
+
+// Helper function to sort models based on providerOrder
+const sortModels = (modelsToSort: string[]): string[] => {
+  return providerOrder
+    .map(providerName => {
+      return modelsToSort.find(modelId => {
+        const modelProvider = getProviderForModel(modelId);
+        return modelProvider?.name === providerName;
+      });
+    })
+    .filter(Boolean) as string[];
+};
+
 export default function SDKPlayground() {
   // Initialize mode from localStorage or default to 'fast'
   const [mode, setMode] = useState<'fast' | 'smart'>(() => {
@@ -187,14 +202,8 @@ export default function SDKPlayground() {
     setModels(newModels);
   };
 
-  // Initialize models based on the stored mode
-  const [models, setModels] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('modelMode') as 'fast' | 'smart';
-      return getDefaultModels(savedMode || 'fast');
-    }
-    return getDefaultModels('fast');
-  });
+  // Initialize models to a consistent default value
+  const [models, setModels] = useState<string[]>(getDefaultModels('fast'));
 
   // Initialize state variables
   const [input, setInput] = useState('');
@@ -765,7 +774,10 @@ export default function SDKPlayground() {
               "transition-opacity duration-500",
               isDismissing ? "opacity-0" : "opacity-100"
             )}>
-              <InitialModelSelection models={models} handleModelChange={handleModelChange} />
+              <InitialModelSelection
+                models={models}
+                setModels={setModels}
+              />
             </div>
           ) : (
             <div className="space-y-6">
@@ -863,27 +875,26 @@ export default function SDKPlayground() {
                         grid gap-6
                         ${models.filter(Boolean).length === 2 
                           ? 'grid-cols-1 sm:grid-cols-2' 
-                          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                          : models.filter(Boolean).length === 3
+                            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
                         }
                       `}>
-                        {['Anthropic', 'OpenAI', 'Google'].map((providerName, idx) => {
-                          const modelIndex = models.findIndex(modelId => {
-                            const provider = getProviderForModel(modelId);
-                            return provider?.name === providerName;
-                          });
+                        {models.map((modelId, idx) => {
+                          if (!modelId) return null;
 
-                          // Only render card if model is selected
-                          if (modelIndex === -1) return null;
+                          const provider = getProviderForModel(modelId);
+                          if (!provider) return null;
 
                           return (
                             <ResultCard 
-                              key={providerName}
-                              index={modelIndex}
+                              key={modelId}
+                              index={idx}
                               models={models}
                               results={conversation.results}
                               isStreaming={isStreaming}
                               onRegenerate={handleRegenerate}
-                              isRegenerating={regeneratingModels.includes(modelIndex)}
+                              isRegenerating={regeneratingModels.includes(idx)}
                             />
                           );
                         })}

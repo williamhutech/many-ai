@@ -14,9 +14,9 @@ export interface Model {
 
 export interface AIProvider {
   name: string;
-  clientName: string; // Name to identify the client
-  nickname: string; // Add this line
-  avatar: string;  // Add this line
+  clientName: string;
+  nickname: string;
+  avatar: string;
   models: Model[];
 }
 
@@ -25,8 +25,8 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'Anthropic',
     clientName: 'anthropic',
-    nickname: 'Claude', // Add this line
-    avatar: '/avatars/claude.png',  // Add this line
+    nickname: 'Claude',
+    avatar: '/avatars/claude.png',
     models: [
       {
         id: 'claude-3-haiku-20240307',
@@ -49,8 +49,8 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'OpenAI',
     clientName: 'openai',
-    nickname: 'ChatGPT', // Add this line
-    avatar: '/avatars/chatgpt.png',  // Add this line
+    nickname: 'ChatGPT',
+    avatar: '/avatars/chatgpt.png',
     models: [
       {
         id: 'gpt-4o-2024-08-06',
@@ -81,8 +81,8 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'Google',
     clientName: 'google',
-    nickname: 'Gemini', // Add this line
-    avatar: '/avatars/gemini.png',  // Add this line
+    nickname: 'Gemini',
+    avatar: '/avatars/gemini.png',
     models: [
       {
         id: 'gemini-1.5-pro-002',
@@ -105,8 +105,8 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'DeepInfra',
     clientName: 'deepinfra',
-    nickname: 'Llama', // Add this line
-    avatar: '/avatars/llama.png',  // Add this line
+    nickname: 'Llama',
+    avatar: '/avatars/llama.png',
     models: [
       {
         id: 'meta-llama/Llama-3.2-90B-Vision-Instruct',
@@ -137,8 +137,8 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'Groq',
     clientName: 'groq',
-    nickname: 'Llama', // Add this line
-    avatar: '/avatars/llama.png',  // Add this line
+    nickname: 'Llama',
+    avatar: '/avatars/llama.png',
     models: [
       {
         id: 'llama-3.2-90b-vision-preview',
@@ -161,12 +161,12 @@ export const aiProviders: AIProvider[] = [
   {
     name: 'Together AI',
     clientName: 'together',
-    nickname: 'Llama', // Add this line
-    avatar: '/avatars/llama.png',  // Add this line
+    nickname: 'Llama',
+    avatar: '/avatars/llama.png',
     models: [
       {
         id: 'meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo',
-        displayName: 'Llama 3.2 [Smart]',
+        displayName: 'Llama [Smart]',
         maxTokens: 2000,
         enabled: true,
         mode: 'smart',
@@ -174,7 +174,7 @@ export const aiProviders: AIProvider[] = [
       },
       {
         id: 'meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo',
-        displayName: 'Llama 3.2 [FAST]',
+        displayName: 'Llama [FAST]',
         maxTokens: 2000,
         enabled: true,
         mode: 'fast',
