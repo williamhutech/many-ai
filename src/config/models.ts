@@ -55,7 +55,7 @@ export const aiProviders: AIProvider[] = [
       {
         id: 'gpt-4o-2024-08-06',
         displayName: 'ChatGPT 4o [Smart]',
-        maxTokens: 2000,
+        maxTokens: 4000,
         enabled: true,
         mode: 'smart',
         prePrompt: 'Prioritize key information in your answer.',
@@ -93,7 +93,7 @@ export const aiProviders: AIProvider[] = [
         prePrompt: 'Prioritize key information in your answer.',
       },
       {
-        id: 'gemini-1.5-flash',
+        id: 'gemini-1.5-pro-002',
         displayName: 'Gemini 1.5 [FAST]',
         maxTokens: 2000,
         enabled: true,
