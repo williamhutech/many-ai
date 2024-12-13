@@ -61,7 +61,7 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, s
     } else {
       // Enforce maximum of 3 providers
       if (models.length >= 3) {
-        alert('You can select up to 3 AI providers.');
+        //alert('You can select up to 3 AI providers.');
         return;
       }
 

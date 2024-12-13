@@ -6,10 +6,9 @@ import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
 import { Button, Input, UserPromptBubble } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { getProviderForModel, getModelByProviderAndMode } from '@/config/models';
+import { getProviderForModel, getModelByProviderAndMode, getDefaultModels } from '@/config/models';
 import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
 import Image from 'next/image';
-import { getDefaultModels } from '@/config/models';
 import MobileResultCarousel from '@/components/pages/mobileresultcarousel';
 import dynamic from 'next/dynamic';
 import React from 'react';
@@ -186,18 +185,20 @@ const sortModels = (modelsToSort: string[]): string[] => {
 };
 
 export default function SDKPlayground() {
-  // Mode state
+  // Initialize mode to 'fast'
   const [mode, setMode] = useState<'fast' | 'smart'>('fast');
 
-  // Models state
-  const [models, setModels] = useState<string[]>([]);
+  // Initialize models to default models for 'fast' mode
+  const [models, setModels] = useState<string[]>(getDefaultModels('fast'));
 
   // Function to handle mode change
   const handleModeChange = (newMode: 'fast' | 'smart') => {
     setMode(newMode);
 
     // Update localStorage
-    localStorage.setItem('modelMode', newMode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('modelMode', newMode);
+    }
 
     // Track mode change event
     amplitude.track('Mode Changed', {
@@ -224,48 +225,35 @@ export default function SDKPlayground() {
 
   // Initialize mode and models from localStorage on mount
   useEffect(() => {
-    // Load mode from localStorage
-    const savedMode = localStorage.getItem('modelMode') as 'fast' | 'smart';
-    if (savedMode) {
-      setMode(savedMode);
-    } else {
-      localStorage.setItem('modelMode', mode);
-    }
+    // Check if 'localStorage' is available
+    if (typeof window !== 'undefined') {
+      // Load mode from localStorage
+      const savedMode = localStorage.getItem('modelMode') as 'fast' | 'smart';
+      if (savedMode) {
+        setMode(savedMode);
+      }
 
-    // Load selected models from localStorage
-    const savedModels = localStorage.getItem('selectedModels');
-    if (savedModels) {
-      const parsedModels = JSON.parse(savedModels);
-      setModels(sortModels(parsedModels.slice(0, 3)));
-    } else {
-      setModels(getDefaultModels(mode));
+      // Load selected models from localStorage
+      const savedModels = localStorage.getItem('selectedModels');
+      if (savedModels) {
+        const parsedModels = JSON.parse(savedModels);
+        setModels(sortModels(parsedModels.slice(0, 3)));
+      }
     }
   }, []);
 
   // Save mode to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('modelMode', mode);
-
-    // Update models when mode changes
-    setModels(prevModels => {
-      const selectedProviders = prevModels.map(modelId => {
-        const provider = getProviderForModel(modelId);
-        return provider?.name;
-      }).filter(Boolean) as string[];
-
-      const newModels = selectedProviders.map(providerName => {
-        const model = getModelByProviderAndMode(providerName, mode);
-        return model?.id || '';
-      });
-
-      // Return sorted models according to providerOrder
-      return sortModels(newModels.filter(id => id !== ''));
-    });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('modelMode', mode);
+    }
   }, [mode]);
 
   // Save models to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('selectedModels', JSON.stringify(models));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedModels', JSON.stringify(models));
+    }
   }, [models]);
 
   // Initialize state variables

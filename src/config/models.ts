@@ -231,7 +231,7 @@ export const getModelByProviderAndMode = (providerName: string, mode: 'fast' | '
 
 // Function to get models for all three providers based on mode
 export const getDefaultModels = (mode: 'fast' | 'smart'): string[] => {
-  const providers = ['Anthropic', 'Google', 'OpenAI'];
+  const providers = ['Anthropic', 'OpenAI', 'Google'];
   const models = providers.map(provider => {
     const model = getModelByProviderAndMode(provider, mode);
     return model?.id || '';
