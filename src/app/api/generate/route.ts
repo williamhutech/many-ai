@@ -183,31 +183,69 @@ export async function POST(req: Request) {
           stream: true,
         });
 
+        let fullResponse = '';
         for await (const chunk of modelStream) {
           if ('choices' in chunk && chunk.choices[0]?.delta?.content) {
-            modelResponse += chunk.choices[0].delta.content;
-            await writeChunk(chunk.choices[0].delta.content);
+            const content = chunk.choices[0].delta.content;
+            fullResponse += content;
+            modelResponse += content;
+            await writeChunk(content);
           }
         }
+
+        // Add the assistant's response to history
+        history.push({ 
+          role: 'assistant', 
+          content: fullResponse 
+        });
       } else if (provider.clientName === 'google') {
-        const model = googleClient.getGenerativeModel({ model: selectedModel });
-        
-        // Convert history to Gemini's format
+        // Get model configuration once
+        const modelConfig = getModelById(selectedModel);
+        if (!modelConfig) {
+          throw new Error('Model configuration not found');
+        }
+
+        const model = googleClient.getGenerativeModel({ 
+          model: selectedModel,
+          generationConfig: {
+            maxOutputTokens: modelConfig.maxTokens,
+            temperature: 0.7,
+            candidateCount: 1,
+            topK: 40,
+            topP: 0.8,
+          }
+        });
+
+        // Optimize history format for Gemini
         const geminiHistory = history.map((msg: { role: string; content: string }) => ({
           role: msg.role === 'user' ? 'user' : 'model',
           parts: [{ text: msg.content }]
         }));
 
-        const chat = model.startChat({
-          history: geminiHistory.slice(0, -1) // Exclude the last message as it will be sent separately
-        });
+        try {
+          // Use generateContentStream with optimized parameters
+          const result = await model.generateContentStream({
+            contents: geminiHistory
+          });
 
-        const result = await chat.sendMessageStream(prompt);
+          let fullResponse = '';
+          const textDecoder = new TextDecoder();
 
-        for await (const chunk of result.stream) {
-          const chunkText = chunk.text();
-          modelResponse += chunkText;
-          await writeChunk(chunkText);
+          for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            fullResponse += chunkText;
+            modelResponse += chunkText;
+            await writeChunk(chunkText);
+          }
+
+          // Add response to history
+          history.push({ 
+            role: 'assistant', 
+            content: fullResponse 
+          });
+        } catch (error) {
+          console.error('Gemini streaming error:', error);
+          throw error;
         }
       } else if (provider.clientName === 'deepinfra') {
         modelStream = await (client as OpenAI).chat.completions.create({
