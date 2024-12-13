@@ -857,20 +857,36 @@ export default function SDKPlayground() {
                       />
                     </div>
                     
-                    {/* Model cards - shared row */}
+                    {/* Model cards - maintain order from selection */}
                     {showAllModels && (
-                      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                        {models.map((_, modelIndex) => (
-                          <ResultCard 
-                            key={modelIndex} 
-                            index={modelIndex} 
-                            models={models} 
-                            results={conversation.results} 
-                            isStreaming={isStreaming}
-                            onRegenerate={handleRegenerate}
-                            isRegenerating={regeneratingModels.includes(modelIndex)}
-                          />
-                        ))}
+                      <div className={`
+                        grid gap-6
+                        ${models.filter(Boolean).length === 2 
+                          ? 'grid-cols-1 sm:grid-cols-2' 
+                          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                        }
+                      `}>
+                        {['Anthropic', 'OpenAI', 'Google'].map((providerName, idx) => {
+                          const modelIndex = models.findIndex(modelId => {
+                            const provider = getProviderForModel(modelId);
+                            return provider?.name === providerName;
+                          });
+
+                          // Only render card if model is selected
+                          if (modelIndex === -1) return null;
+
+                          return (
+                            <ResultCard 
+                              key={providerName}
+                              index={modelIndex}
+                              models={models}
+                              results={conversation.results}
+                              isStreaming={isStreaming}
+                              onRegenerate={handleRegenerate}
+                              isRegenerating={regeneratingModels.includes(modelIndex)}
+                            />
+                          );
+                        })}
                       </div>
                     )}
                   </div>

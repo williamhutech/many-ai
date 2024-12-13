@@ -90,7 +90,7 @@ export const aiProviders: AIProvider[] = [
         maxTokens: 2000,
         enabled: true,
         mode: 'smart',
-        prePrompt: 'Prioritize key information in your answer.',
+        prePrompt: 'Prioritize key information in your answer if applicable',
       },
       {
         id: 'gemini-1.5-pro-002',
@@ -98,7 +98,7 @@ export const aiProviders: AIProvider[] = [
         maxTokens: 2000,
         enabled: true,
         mode: 'fast',
-        prePrompt: 'Prioritize key information in your answer.',
+        prePrompt: 'Prioritize key information in your answer if applicable',
       },
     ],
   },

@@ -32,6 +32,13 @@ export const ResultCard: React.FC<ResultCardProps> =
     
     const shouldShowStreaming = isLatestConversation && isStreaming;
     
+    const selectedModel = isFusionCard ? '' : models[index];
+    const selectedProvider = isFusionCard ? null : getProviderForModel(selectedModel);
+    
+    // Track both streaming and content states
+    const [localContent, setLocalContent] = useState('');
+    const [isLoadingContent, setIsLoadingContent] = useState(false);
+    
     const currentResult = isFusionCard ? fusionResult : (results && results[index] ? results[index] : '');
     const [hasCopied, setHasCopied] = useState(false);
 
@@ -50,6 +57,21 @@ export const ResultCard: React.FC<ResultCardProps> =
         return () => clearTimeout(timer);
       }
     }, [hasCopied]);
+
+    // Update local content when result changes
+    useEffect(() => {
+      if (currentResult) {
+        setLocalContent(currentResult);
+        setIsLoadingContent(false);
+      }
+    }, [currentResult]);
+
+    // Handle streaming state
+    useEffect(() => {
+      if (isStreaming && isLatestConversation) {
+        setIsLoadingContent(true);
+      }
+    }, [isStreaming, isLatestConversation]);
 
     const handleCopy = async () => {
       if (!currentResult) return;
@@ -154,8 +176,6 @@ export const ResultCard: React.FC<ResultCardProps> =
       });
       return modifiedText;
     };
-    const selectedModel = isFusionCard ? '' : models[index];
-    const selectedProvider = isFusionCard ? null : getProviderForModel(selectedModel);
 
     const ContentSkeletonLoader = () => (
       <div className="animate-pulse space-y-2 p-4">
@@ -320,14 +340,12 @@ export const ResultCard: React.FC<ResultCardProps> =
           </div>
         </div>
         <CardContent className="flex-1 overflow-y-auto p-5 pt-1 relative">
-          {((shouldShowStreaming && isStreaming) || 
-             (isFusionCard && (isFusionLoading || !currentResult)) ||
-             isRegenerating) ? (
+          {(isLoadingContent || isRegenerating || (isFusionCard && isFusionLoading)) ? (
             <ContentSkeletonLoader />
           ) : (
             <Textarea
               ref={textareaRef}
-              value={isFusionCard ? replacePersonWithNickname(currentResult || '') : (currentResult || '')}
+              value={isFusionCard ? replacePersonWithNickname(localContent || '') : (localContent || '')}
               className="w-full text-sm text-gray-700"
               style={{ maxHeight: '300px', overflowY: 'auto', resize: 'none' }}
               aria-placeholder="Response will appear here..."

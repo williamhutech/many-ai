@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { getAllModels, Model, getProviderForModel } from '@/config/models';
+import { Button } from '@/components/ui/button';
+import { getAllModels, Model, getProviderForModel, aiProviders } from '@/config/models';
 import Image from 'next/image';
 
 interface InitialModelSelectionProps {
@@ -20,65 +20,91 @@ const InitialModelSelectionComponent: React.FC<InitialModelSelectionProps> = ({ 
     loadModels();
   }, []);
 
-  const getProvider = useCallback((modelId: string) => {
-    return getProviderForModel(modelId);
-  }, []);
+  const isProviderSelected = (providerName: string) => {
+    return models.some(modelId => {
+      const provider = getProviderForModel(modelId);
+      return provider?.name === providerName;
+    });
+  };
+
+  const handleProviderToggle = (providerName: string) => {
+    const provider = aiProviders.find(p => p.name === providerName);
+    if (!provider) return;
+
+    const currentIndex = models.findIndex(modelId => {
+      const modelProvider = getProviderForModel(modelId);
+      return modelProvider?.name === providerName;
+    });
+
+    if (currentIndex === -1) {
+      // Find first available slot
+      const emptyIndex = models.findIndex(model => !model);
+      if (emptyIndex !== -1) {
+        // Select the first enabled model from this provider
+        const firstEnabledModel = provider.models.find(m => m.enabled);
+        if (firstEnabledModel) {
+          handleModelChange(emptyIndex, firstEnabledModel.id);
+        }
+      }
+    } else {
+      // Deselect by setting empty string
+      handleModelChange(currentIndex, '');
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto space-y-6">
       <h2 className="text-xl font-semibold text-center">
-        Start by Selecting the Models You&apos;d like to Use:
+        Select AI Models to Use for ManyAI:
       </h2>
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full">
-        {[0, 1, 2].map((index) => {
-          const selectedModel = modelOptions.find(model => model.id === models[index]);
-          const selectedProvider = selectedModel ? getProvider(selectedModel.id) : null;
+      <div className="flex gap-4 flex-wrap justify-center">
+        {['Anthropic', 'OpenAI', 'Google'].map((providerName) => {
+          const provider = aiProviders.find(p => p.name === providerName);
+          const isSelected = isProviderSelected(providerName);
 
           return (
-            <Card key={index} className="p-4">
-              <Select value={models[index]} onValueChange={(value) => handleModelChange(index, value)}>
-                <SelectTrigger className="w-full">
-                  <div className="flex items-center gap-2">
-                    {selectedProvider && (
-                      <Image
-                        src={selectedProvider.avatar}
-                        alt={`${selectedProvider.nickname} avatar`}
-                        width={16}
-                        height={16}
-                        className="rounded-full"
-                      />
-                    )}
-                    <span>{selectedModel?.displayName}</span>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  {modelOptions.map((model) => {
-                    const provider = getProvider(model.id);
-                    return (
-                      <SelectItem 
-                        key={model.id} 
-                        value={model.id}
-                        className="px-2"
-                        disabled={models.includes(model.id) && model.id !== models[index]}
-                      >
-                        <div className="flex items-center gap-2">
-                          {provider && (
-                            <Image
-                              src={provider.avatar}
-                              alt={`${provider.nickname} avatar`}
-                              width={16}
-                              height={16}
-                              className="rounded-full"
-                            />
-                          )}
-                          <span>{model.displayName}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </Card>
+            <Button
+              key={providerName}
+              onClick={() => handleProviderToggle(providerName)}
+              className={`
+                flex items-center gap-2 px-4 py-2 min-w-[120px]
+                bg-white
+                ${isSelected 
+                  ? 'border-1.5 border-gray-200 text-black bg-gray-50 hover:bg-gray-100' 
+                  : 'border border-gray-100 text-gray-400 bg-gray-0 hover:bg-gray-50'
+                }
+                transition-all duration-200
+              `}
+            >
+              {isSelected && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="gray"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-zinc-400"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+              {provider && (
+                <>
+                  <Image
+                    src={provider.avatar}
+                    alt={`${provider.nickname} avatar`}
+                    width={20}
+                    height={20}
+                    className={`rounded-full ${!isSelected ? 'opacity-75' : ''}`}
+                  />
+                  <span className="mr-2">{provider.nickname}</span>
+                </>
+              )}
+            </Button>
           );
         })}
       </div>
