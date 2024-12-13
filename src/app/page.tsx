@@ -6,7 +6,7 @@ import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
 import { Button, Input, UserPromptBubble } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { getProviderForModel } from '@/config/models';
+import { getProviderForModel, getModelByProviderAndMode } from '@/config/models';
 import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
 import Image from 'next/image';
 import { getDefaultModels } from '@/config/models';
@@ -186,24 +186,87 @@ const sortModels = (modelsToSort: string[]): string[] => {
 };
 
 export default function SDKPlayground() {
-  // Initialize mode from localStorage or default to 'fast'
-  const [mode, setMode] = useState<'fast' | 'smart'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('modelMode') as 'fast' | 'smart') || 'fast';
-    }
-    return 'fast';
-  });
+  // Mode state
+  const [mode, setMode] = useState<'fast' | 'smart'>('fast');
 
-  // Handle mode changes
+  // Models state
+  const [models, setModels] = useState<string[]>([]);
+
+  // Function to handle mode change
   const handleModeChange = (newMode: 'fast' | 'smart') => {
     setMode(newMode);
+
+    // Update localStorage
     localStorage.setItem('modelMode', newMode);
-    const newModels = getDefaultModels(newMode);
-    setModels(newModels);
+
+    // Track mode change event
+    amplitude.track('Mode Changed', {
+      previousMode: mode,
+      newMode: newMode,
+    });
+
+    // Update models when mode changes
+    setModels(prevModels => {
+      const selectedProviders = prevModels.map(modelId => {
+        const provider = getProviderForModel(modelId);
+        return provider?.name;
+      }).filter(Boolean) as string[];
+
+      const newModels = selectedProviders.map(providerName => {
+        const model = getModelByProviderAndMode(providerName, newMode);
+        return model?.id || '';
+      });
+
+      // Return sorted models according to providerOrder
+      return sortModels(newModels.filter(id => id !== ''));
+    });
   };
 
-  // Initialize models to a consistent default value
-  const [models, setModels] = useState<string[]>(getDefaultModels('fast'));
+  // Initialize mode and models from localStorage on mount
+  useEffect(() => {
+    // Load mode from localStorage
+    const savedMode = localStorage.getItem('modelMode') as 'fast' | 'smart';
+    if (savedMode) {
+      setMode(savedMode);
+    } else {
+      localStorage.setItem('modelMode', mode);
+    }
+
+    // Load selected models from localStorage
+    const savedModels = localStorage.getItem('selectedModels');
+    if (savedModels) {
+      const parsedModels = JSON.parse(savedModels);
+      setModels(sortModels(parsedModels.slice(0, 3)));
+    } else {
+      setModels(getDefaultModels(mode));
+    }
+  }, []);
+
+  // Save mode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('modelMode', mode);
+
+    // Update models when mode changes
+    setModels(prevModels => {
+      const selectedProviders = prevModels.map(modelId => {
+        const provider = getProviderForModel(modelId);
+        return provider?.name;
+      }).filter(Boolean) as string[];
+
+      const newModels = selectedProviders.map(providerName => {
+        const model = getModelByProviderAndMode(providerName, mode);
+        return model?.id || '';
+      });
+
+      // Return sorted models according to providerOrder
+      return sortModels(newModels.filter(id => id !== ''));
+    });
+  }, [mode]);
+
+  // Save models to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('selectedModels', JSON.stringify(models));
+  }, [models]);
 
   // Initialize state variables
   const [input, setInput] = useState('');
@@ -777,6 +840,7 @@ export default function SDKPlayground() {
               <InitialModelSelection
                 models={models}
                 setModels={setModels}
+                mode={mode}
               />
             </div>
           ) : (

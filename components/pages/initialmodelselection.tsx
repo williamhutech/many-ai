@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { getAllModels, getProviderForModel, getModelByProviderAndMode, aiProviders, Model, getDefaultModels } from '@/config/models';
+import { getAllModels, getProviderForModel, getModelByProviderAndMode, aiProviders, Model } from '@/config/models';
 import Image from 'next/image';
 
 interface InitialModelSelectionProps {
   models: string[];
   setModels: React.Dispatch<React.SetStateAction<string[]>>;
+  mode: 'fast' | 'smart';
 }
 
-const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, setModels }) => {
+const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, setModels, mode }) => {
   const [modelOptions, setModelOptions] = useState<Model[]>([]);
 
   // Define the fixed provider order
@@ -20,17 +21,6 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, s
       setModelOptions(models);
     };
     loadModels();
-  }, []);
-
-  useEffect(() => {
-    const savedModels = JSON.parse(localStorage.getItem('selectedModels') || '[]');
-
-    if (savedModels.length > 0) {
-      setModels(sortModels(savedModels.slice(0, 3)));
-    } else {
-      const savedMode = localStorage.getItem('modelMode') as 'fast' | 'smart';
-      setModels(getDefaultModels(savedMode || 'fast'));
-    }
   }, []);
 
   const isProviderSelected = (providerName: string) => {
@@ -75,15 +65,16 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, s
         return;
       }
 
-      // Select the model for the current mode
-      const currentMode = (localStorage.getItem('modelMode') as 'fast' | 'smart') || 'fast';
-      const model = getModelByProviderAndMode(providerName, currentMode);
+      // Select the model for the current mode (use mode prop)
+      const model = getModelByProviderAndMode(providerName, mode);
       if (model) {
         setModels(prevModels => {
           const updatedModels = [...prevModels, model.id];
           // Return sorted models according to providerOrder
           return sortModels(updatedModels);
         });
+      } else {
+        console.warn(`No model found for provider ${providerName} and mode ${mode}`);
       }
     }
   };
