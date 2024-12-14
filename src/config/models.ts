@@ -55,7 +55,7 @@ export const aiProviders: AIProvider[] = [
       {
         id: 'gpt-4o-2024-08-06',
         displayName: 'ChatGPT 4o [Smart]',
-        maxTokens: 4000,
+        maxTokens: 6000,
         enabled: true,
         mode: 'smart',
         prePrompt: 'Prioritize key information in your answer.',
