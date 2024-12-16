@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import ResultCard from './resultcard';
-import { Card, CardContent } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { getProviderForModel } from '@/config/models';
-import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 interface MobileResultCarouselProps {
   models: string[];
@@ -28,46 +25,33 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   isStreaming,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const totalSlides = models.length + 1;
   const [direction, setDirection] = useState(0);
 
-  const totalSlides = models.length + 1;
-
-  const replacePersonWithNickname = (text: string) => {
-    let modifiedText = text;
-    models.forEach((modelId, index) => {
-      const provider = getProviderForModel(modelId);
-      if (provider) {
-        const regexName = new RegExp(`${index === 0 ? 'Anny' : index === 1 ? 'Ben' : 'Clarice'}`, 'g');
-        modifiedText = modifiedText.replace(regexName, provider.nickname);
-      }
-    });
-    return modifiedText;
+  const handleNext = () => {
+    if (currentIndex < totalSlides - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
   };
 
-  const ContentSkeletonLoader = () => (
-    <div className="animate-pulse space-y-2 p-4">
-      <div className="space-y-2">
-        <div className="h-4 bg-zinc-100 rounded w-[100%]"></div>
-        <div className="h-4 bg-zinc-100 rounded w-[100%]"></div>
-        <div className="h-4 bg-zinc-100 rounded w-[95%]"></div>
-      </div>
-    </div>
-  );
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
 
   const slideVariants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? '100%' : '-100%',
-      opacity: 0.5
+      x: direction > 0 ? 20 : 0,
+      opacity: 0
     }),
     center: {
-      zIndex: 1,
       x: 0,
       opacity: 1
     },
     exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? '100%' : '-100%',
-      opacity: 0.5
+      x: direction < 0 ? 20 : 0,
+      opacity: 0
     })
   };
 
@@ -94,27 +78,23 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col z-0">
-      <div className="absolute inset-0 bottom-8 z-0">
+    <div className="relative w-full h-full flex flex-col">
+      <div className="absolute inset-0 bottom-8">
         <AnimatePresence initial={false} custom={direction} mode="sync">
           <motion.div
             key={currentIndex}
-            custom={direction}
             variants={slideVariants}
             initial="enter"
             animate="center"
             exit="exit"
             transition={{
-              x: { type: "tween", duration: 0.15 },
-              opacity: { duration: 0.1 }
+              x: { type: "tween", duration: 0.2 },
+              opacity: { duration: 0.15 }
             }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.3}
+            className="absolute inset-0"
             onDragEnd={handleDragEnd}
-            className="absolute inset-0 px-2"
           >
-            <div className="h-full">
+            <div className="h-full px-0">
               {currentIndex === 0 ? (
                 <ResultCard
                   index={models.length}
@@ -126,6 +106,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
                   onRegenerate={onRegenerate}
                   isLatestConversation={isLatestConversation}
                   isStreaming={isStreaming}
+                  isMobile={true}
                 />
               ) : (
                 <ResultCard
@@ -136,26 +117,69 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
                   onRegenerate={onRegenerate}
                   isLatestConversation={isLatestConversation}
                   isRegenerating={false}
+                  isMobile={true}
                 />
               )}
             </div>
           </motion.div>
         </AnimatePresence>
-      </div>
-      <div className="absolute bottom-0 left-0 right-0 h-6 flex items-center justify-center">
-        <div className="bg-zinc-200 h-1 rounded-full w-48 overflow-hidden">
-          <motion.div
-            className="bg-zinc-800 h-full rounded-full"
-            initial={false}
-            animate={{
-              width: `${100 / totalSlides}%`,
-              x: `${(100 * currentIndex)}%`
-            }}
-            transition={{
-              type: "tween",
-              duration: 0.15
-            }}
-          />
+
+        {/* Navigation Arrows */}
+        <div className="absolute inset-y-0 left-2 flex items-center z-10">
+          {currentIndex > 0 && (
+            <Button
+              variant="ghost"
+              onClick={handlePrev}
+              className="h-10 w-10 rounded-md bg-gray-100 hover:bg-gray-200"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-gray-600"
+              >
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+            </Button>
+          )}
+        </div>
+
+        <div className="absolute inset-y-0 right-2 flex items-center z-10">
+          {currentIndex < totalSlides - 1 && (
+            <Button
+              variant="ghost"
+              onClick={handleNext}
+              className="h-10 w-10 rounded-md bg-gray-100 hover:bg-gray-200"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-gray-500"
+              >
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </Button>
+          )}
+        </div>
+
+        {/* Model Counter */}
+        <div className="absolute bottom-16 left-0 right-0 flex justify-center">
+          <div className="bg-gray-100 rounded-full px-3 py-1 text-sm">
+            {currentIndex + 1} / {totalSlides}
+          </div>
         </div>
       </div>
     </div>

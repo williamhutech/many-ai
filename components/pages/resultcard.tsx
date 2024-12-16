@@ -24,6 +24,7 @@ interface ResultCardProps {
     id: string;
     timestamp: string;
   };
+  isMobile?: boolean;
 }
 
 export const ResultCard = ({
@@ -40,6 +41,7 @@ export const ResultCard = ({
   onRegenerate,
   isRegenerating,
   isLatestConversation,
+  isMobile,
 }: ResultCardProps) => {
   const textareaRef = useRef<HTMLDivElement>(null);
 
@@ -224,7 +226,7 @@ export const ResultCard = ({
   };
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className={`flex flex-col h-full ${isMobile ? 'w-full border-none shadow-none' : ''}`}>
       <div className="flex items-center justify-between p-5 pb-0">
         <div className="flex items-center gap-3">
           {isFusionCard ? (
@@ -365,7 +367,7 @@ export const ResultCard = ({
           )}
         </div>
       </div>
-      <CardContent className="flex-1 overflow-y-auto p-5 pt-1 relative">
+      <CardContent className={`flex-1 overflow-y-auto p-5 pt-1 relative ${isMobile ? 'w-full' : ''}`}>
         {(isLoadingContent || isRegenerating) ? (
           <ContentSkeletonLoader />
         ) : (
@@ -376,8 +378,10 @@ export const ResultCard = ({
                 ? replacePersonWithNickname(localContent || '')
                 : localContent || ''
             }
-            className="w-full text-sm text-gray-700"
-            style={{ maxHeight: '300px', overflowY: 'auto', resize: 'none' }}
+            className={`w-full text-sm text-gray-700 prose prose-sm max-w-none min-h-[80px] bg-white px-3 py-2 overflow-y-auto rounded-sm border-none ${
+              isMobile ? 'w-full' : 'max-h-[300px]'
+            }`}
+            style={{ overflowY: 'auto', resize: 'none' }}
             aria-placeholder="Response will appear here..."
           />
         )}

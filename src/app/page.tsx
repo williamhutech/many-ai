@@ -151,7 +151,7 @@ const Header = ({ mode, onModeChange, onNewChat }: {
         </Select>
         <div className="hidden sm:block">
           <Button variant="outline" size="xs" className="text-xs group relative">
-            v2.2
+            v2.3
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
               <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
               <ul className="list-disc list-inside text-left">
@@ -955,7 +955,7 @@ export default function SDKPlayground() {
                   </div>
 
                   {/* Mobile carousel */}
-                  <div className="sm:hidden w-full h-[calc(100vh-380px)] relative z-0">
+                  <div className="sm:hidden w-full h-[calc(100vh-var(--header-height)-var(--footer-height))]">
                     <MobileResultCarousel
                       models={models}
                       results={conversation.results}
