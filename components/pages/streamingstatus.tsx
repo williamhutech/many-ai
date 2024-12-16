@@ -19,7 +19,7 @@ const StreamingStatus: React.FC<StreamingStatusProps> = ({
   let statusText = '';
 
   if (isFusionLoading && streamingModels.length === 0 && hasResponses) {
-    statusText = "ManyAI is generating...";
+    statusText = "ManyAI is synthesizing...";
   } else if (streamingModels.length === 1) {
     statusText = `${streamingModels[0]} is thinking...`;
   } else if (streamingModels.length > 1) {

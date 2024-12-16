@@ -501,6 +501,7 @@ export default function SDKPlayground() {
     handleFusion('Multi-Model Response', true, updatedConversationHistories);
 
     setIsLoading(false);
+    setIsStreaming(false);
 
     // Track prompt submission
     amplitude.track('Prompt Submitted', {
@@ -547,9 +548,8 @@ export default function SDKPlayground() {
   };
 
   const handleFusion = async (buttonName: string, autoCall: boolean = false, latestConversationHistories?: { [modelId: string]: Array<{ role: string; content: string }> }) => {
-    if (!autoCall) {
-      setIsFusionLoading(true);
-    }
+    // Always set loading state, regardless of autoCall
+    setIsFusionLoading(true);
     
     // Clear previous fusion result
     setConversations(prev => {
@@ -579,11 +579,11 @@ export default function SDKPlayground() {
     );
 
     const prePrompts = {
-      "Multi-Model Response": "Instruction: Response in the language as the ask and the responses. Based on the ask, use only 1 of the 2 modes that would provide the most optimal output: synethsis, or create. There is no need to state explicitly which mode you are using in the response. If there is minimal to no value add in synthesizing, nor is the ask related to create/generate - use the 3rd mode - follow up. Each mode corresponds to a set of requirements.\\n\\n1.Synthesis: 'Prioritize key information in your answer. Analyze and synthesize the responses from three different persons to the ask\\n\\nYour synthesis should:\\n\\n- provide answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models\\n- use bold and/or bullet points where appropriate\\n- highlight discrepancies between responses (and refer to the person) if relevant, you may present this via table if deemed useful; \\n- you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question'\\n\\n2.Create: 'Take all 3 responses and merge into 1 single output in respond to the ask. It should:\\n\\n- Prioritse the exact ask\\n- Consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one\\n- You may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the ask\\n- Do not state the source, or mention Anny, Ben, and Clarice'\\n\\n- For both modes, add a divider after the output, and have footnotes of which parts were contributed by which response in italics.\\n\\n3.Follow Up: 'Since no value add in synthesizing/creating, simply respond to the ask, followed by some sort of follow up. No mention of name of response. No footnote or divider allowed.'",    };
+      "Multi-Model Response": "Instruction: Response in the language as the ask and the responses. Based on the ask, use only 1 of the 2 modes that would provide the most optimal output: synethsis, or create. There is no need to state explicitly which mode you are using in the response. If there is minimal to no value add in synthesizing, nor is the ask related to create/generate - use the 3rd mode - follow up. Each mode corresponds to a set of requirements.\\n\\n1.Synthesis: 'Prioritize key information in your answer. Analyze and synthesize the responses from three different persons to the ask\\n\\nYour synthesis should:\\n\\n- provide answer that incorporates the best insights from all three responses address/answer the question if applicable, note any unique perspectives or information provided by individual models\\n- use bold and/or bullet points where appropriate\\n- highlight discrepancies between responses (and refer to the person) if relevant, you may present this via table if deemed useful; \\n- you may directly quote from their response, or copy the entire paragraph/phrase/table as long as it best answers the question'\\n\\n2.Create: 'Take all 3 responses and merge into 1 single output in respond to the ask. It should:\\n\\n- Prioritse the exact ask\\n- Consider the key difference of various responses, and carefully select the best from each response, then finally, merge into one\\n- You may directly copy contents and/or formatting from their response if deemed to meet the quality, or copy the entire paragraph/phrase/table as long as it best address the ask\\n- Do not state the source, or mention Anny, Bella, and Clarice'\\n\\n- For both modes, add a divider after the output, and have footnotes of which parts were contributed by which response in italics.\\n\\n3.Follow Up: 'Since no value add in synthesizing/creating, simply respond to the ask, followed by some sort of follow up. No mention of name of response. No footnote or divider allowed.'",    };
 
     const fusionModel = 'gpt-4o-2024-08-06';
       
-    const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Ask: ${latestPrompt}\n\nAnny: ${latestResponses[0]}\nBen: ${latestResponses[1]}\nClarice: ${latestResponses[2]}`;
+    const prompt = `${prePrompts[buttonName as keyof typeof prePrompts]}\n\nThe Ask: ${latestPrompt}\n\nAnny: ${latestResponses[0]}\nBella: ${latestResponses[1]}\nClarice: ${latestResponses[2]}`;
 
     try {
       const response = await fetch('/api/generate', {
@@ -834,11 +834,8 @@ export default function SDKPlayground() {
           ) : (
             <div className="space-y-6">
               {conversations.map((conversation, index) => (
-                <div 
-                  key={index} 
-                  className="space-y-4"
-                  ref={index === conversations.length - 1 ? latestConversationRef : null}
-                >
+                <div key={index} className="conversation-section">
+                  {/* User prompt bubble */}
                   <UserPromptBubble
                     prompt={conversation.prompt}
                     index={index}
@@ -904,6 +901,7 @@ export default function SDKPlayground() {
                       fetchResponses();
                     }}
                   />
+
                   {/* AI response cards */}
                   <div className="hidden sm:flex flex-col gap-6">
                     {/* ManyAI card */}
@@ -918,10 +916,12 @@ export default function SDKPlayground() {
                         showAllModels={showAllModels}
                         onToggleShowAllModels={() => setShowAllModels(!showAllModels)}
                         onRegenerate={handleRegenerate}
+                        isLatestConversation={index === conversations.length - 1}
+                        isStreaming={isStreaming}
                       />
                     </div>
-                    
-                    {/* Model cards - maintain order from selection */}
+
+                    {/* Model cards */}
                     {showAllModels && (
                       <div className={`
                         grid gap-6
@@ -934,7 +934,6 @@ export default function SDKPlayground() {
                       `}>
                         {models.map((modelId, idx) => {
                           if (!modelId) return null;
-
                           const provider = getProviderForModel(modelId);
                           if (!provider) return null;
 
@@ -945,14 +944,17 @@ export default function SDKPlayground() {
                               models={models}
                               results={conversation.results}
                               isStreaming={isStreaming}
-                              onRegenerate={handleRegenerate}
                               isRegenerating={regeneratingModels.includes(idx)}
+                              onRegenerate={handleRegenerate}
+                              isLatestConversation={index === conversations.length - 1}
                             />
                           );
                         })}
                       </div>
                     )}
                   </div>
+
+                  {/* Mobile carousel */}
                   <div className="sm:hidden w-full h-[calc(100vh-380px)] relative z-0">
                     <MobileResultCarousel
                       models={models}
@@ -961,6 +963,8 @@ export default function SDKPlayground() {
                       isFusionLoading={isFusionLoading}
                       activeButton={activeButton}
                       onRegenerate={handleRegenerate}
+                      isLatestConversation={index === conversations.length - 1}
+                      isStreaming={isStreaming}
                     />
                   </div>
                 </div>
