@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useState, useEffect, useRef } from 'react';
 import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
-import { Button, Input, UserPromptBubble } from "@/components/ui";
+import { Button, Input, UserPromptBubble, Modal } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { getProviderForModel, getModelByProviderAndMode, getDefaultModels } from '@/config/models';
 import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
@@ -152,7 +152,7 @@ const Header = ({ mode, onModeChange, onNewChat }: {
         </Select>
         <div className="hidden sm:block">
           <Button variant="outline" size="xs" className="text-xs group relative">
-            v2.3
+            v2.4
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full mt-2 px-3 py-2 bg-black text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 max-w-[90vw] w-60 break-words whitespace-normal">
               <div className="font-semibold mb-1 text-left">What&apos;s New?</div>
               <ul className="list-disc list-inside text-left">
@@ -187,7 +187,12 @@ const sortModels = (modelsToSort: string[]): string[] => {
 
 export default function SDKPlayground() {
   // Initialize mode to 'fast'
-  const [mode, setMode] = useState<'fast' | 'smart'>('fast');
+  const [mode, setMode] = useState<'fast' | 'smart'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('modelMode') as 'fast' | 'smart') || 'fast';
+    }
+    return 'fast';
+  });
 
   // Initialize models to default models for 'fast' mode
   const [models, setModels] = useState<string[]>(getDefaultModels('fast'));
@@ -296,6 +301,8 @@ export default function SDKPlayground() {
   const previousHeightRef = useRef<{ [key: number]: number }>({});
   const [isLocationBlocked, setIsLocationBlocked] = useState(false);
   const [blockedCountryName, setBlockedCountryName] = useState<string | null>(null);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   // Check user's location on component mount
   useEffect(() => {
@@ -962,10 +969,14 @@ export default function SDKPlayground() {
       />
       {/* Main content area with conversation history and result cards */}
       <main className={cn(
-        "flex-1 w-full overflow-y-auto",
-        isInitialState ? "flex items-center justify-center" : ""
+        "flex-1 w-full",
+        isInitialState ? "flex items-center justify-center" : "overflow-y-auto"
       )}>
-        <div className="container mx-auto p-6">
+        <div className={cn(
+          "container mx-auto",
+          isInitialState ? "p-4" : "p-6",
+          "md:max-w-[1200px]"
+        )}>
           {(isInitialState || isDismissing) ? (
             <div className={cn(
               "transition-opacity duration-500",
@@ -1122,29 +1133,33 @@ export default function SDKPlayground() {
 
       {/* Footer with input form */}
       <footer 
-        className="bg-gray-50 border-t border-border px-4 sm:px-10 py-2 z-10"
+        className={cn(
+          "relative bg-gray-50 border-t border-border z-10",
+          "px-4 sm:px-10 py-4"
+        )}
         style={{ 
           minHeight: `${footerHeight}px`,
           height: 'auto'
         }}
       >
-        <div className="footer-content">
-          <div className="flex justify-between items-center mb-4 flex-shrink-0">
-            {(isStreaming || isFusionLoading) && (
-              <StreamingStatus 
-                streamingModels={streamingModels} 
-                isFusionLoading={isFusionLoading} 
-                activeButton={activeButton}
-                hasResponses={conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '')}
-              />
-            )}
-          </div>
+        {(isStreaming || isFusionLoading) && (
+          <StreamingStatus 
+            streamingModels={streamingModels} 
+            isFusionLoading={isFusionLoading} 
+            activeButton={activeButton}
+            hasResponses={conversations.length > 0 && conversations[conversations.length - 1].results.some(result => result !== '')}
+          />
+        )}
+        <div className={cn(
+          "footer-content flex flex-col items-center",
+          "max-w-screen-2xl mx-auto space-y-4"
+        )}>
           <form onSubmit={(e) => {
             e.preventDefault();
             if (!isLocationBlocked) {
               handleSubmit(e);
             }
-          }} className="flex flex-col items-center space-y-4 w-full">
+          }} className="w-full flex justify-center">
             <div className="w-11/12 max-h-[40vh]">
               <Input
                 ref={inputRef}
@@ -1178,7 +1193,7 @@ export default function SDKPlayground() {
                   }
                 }}
                 disabled={isLocationBlocked}
-                placeholder={isLocationBlocked ? `We're sorry, this service is not offered in ${blockedCountryName} at the moment. Please stay tuned!` : "Enter your message..."}
+                placeholder={isLocationBlocked ? `We're sorry, this service is not offered in ${blockedCountryName} at the moment. Stay tuned!` : "Enter your message..."}
                 className={cn(
                   isLocationBlocked && "bg-[#F7F7F8] text-zinc-600"
                 )}
@@ -1189,6 +1204,9 @@ export default function SDKPlayground() {
                     onClick={() => {
                       if (!isLocationBlocked) {
                         console.log('Attachment button clicked');
+                        amplitude.track('Attachment Button Clicked', {
+                          timestamp: new Date('2024-12-18T18:10:03+08:00').toISOString()
+                        });
                       }
                     }}
                     disabled={isLocationBlocked}
@@ -1244,18 +1262,78 @@ export default function SDKPlayground() {
                 }
               />
             </div>
-            <p className={cn(
-              "text-xs text-gray-500 flex-shrink-0 pb-2",
-              !isInitialFooter && "hide-on-mobile"
-            )}>
-              {isInitialFooter
-                ? "By continuing, you agree to our Terms and our Privacy Policy."
-                : "AI make mistakes. That's why we're here for multi-model experiences."}
-            </p>
-            {!isInitialFooter && <div className="h-6 sm:hidden" />}
           </form>
+          <p className={cn(
+            "text-xs text-gray-500 flex-shrink-0 pb-2",
+            !isInitialFooter ? "block sm:block" : ""
+          )}>
+            {isInitialFooter
+              ? <>By continuing, you agree to our <button onClick={(e) => { e.preventDefault(); setIsTermsOpen(true); }} className="underline hover:text-gray-700">Terms</button> and our <button onClick={(e) => { e.preventDefault(); setIsPrivacyOpen(true); }} className="underline hover:text-gray-700">Privacy Policy</button>.</>
+              : <>
+                  <span className="hidden sm:inline">AI make mistakes. That&apos;s why we&apos;re building true multi-model experience.</span>
+                  <span className="inline sm:hidden">If you like it so far, share ManyAI with your friends!</span>
+                </>
+            }
+          </p>
         </div>
       </footer>
+
+      {/* Terms Modal */}
+      <Modal
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+        title="Terms of Service"
+      >
+        <div className="space-y-6">
+          <section>
+            <h3 className="text-lg font-semibold mb-2">1. Service Description</h3>
+            <p>ManyAI provides a multi-model AI experience platform that allows users to interact with various AI models simultaneously. Our service aggregates responses from different AI providers to deliver comprehensive and diverse insights.</p>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold mb-2">2. User Responsibilities</h3>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>You must use the service in compliance with all applicable laws and regulations.</li>
+              <li>You are responsible for maintaining the confidentiality of your account credentials.</li>
+              <li>You agree not to use the service for any illegal or unauthorized purposes.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold mb-2">3. Service Limitations</h3>
+            <p>Our service is not available in certain jurisdictions due to regulatory requirements. We reserve the right to modify or discontinue any aspect of the service at any time.</p>
+          </section>
+        </div>
+      </Modal>
+
+      {/* Privacy Modal */}
+      <Modal
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
+        title="Privacy Policy"
+      >
+        <div className="space-y-6">
+          <section>
+            <h3 className="text-lg font-semibold mb-2">1. Information We Collect</h3>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>User inputs and prompts submitted to the AI models</li>
+              <li>Usage patterns and interaction data</li>
+              <li>Location data for service availability determination</li>
+              <li>Technical information about your device and browser</li>
+            </ul>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold mb-2">2. How We Use Your Information</h3>
+            <p>We use your information to provide and improve our multi-model AI service, determine service availability based on your location, analyze usage patterns, and monitor and prevent abuse.</p>
+          </section>
+
+          <section>
+            <h3 className="text-lg font-semibold mb-2">3. Data Security</h3>
+            <p>We employ industry-standard security measures to protect your data. This includes encryption of data in transit and secure handling of all user interactions.</p>
+          </section>
+        </div>
+      </Modal>
     </div>
   );
 }

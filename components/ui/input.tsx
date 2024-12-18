@@ -96,7 +96,7 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
             "focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1",
             "disabled:cursor-not-allowed disabled:opacity-75 disabled:bg-[#F7F7F8]",
             "disabled:border-zinc-200 disabled:text-zinc-600 disabled:placeholder:text-zinc-600",
-            "min-h-[40px] resize-none overflow-y-auto",
+            "min-h-[96px] sm:min-h-[64px] resize-none overflow-y-auto", 
             leftElement && "pl-10",
             rightElement && "pr-20",
             className

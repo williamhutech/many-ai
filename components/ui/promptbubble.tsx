@@ -71,7 +71,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     };
     
     calculateInitialWidth();
-  }, [prompt]);
+  }, [prompt, calculateOptimalWidth]);
 
   const adjustTextareaHeight = (element: HTMLTextAreaElement) => {
     element.style.height = '24px';
@@ -95,7 +95,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     if (isEditing && textareaRef.current) {
       adjustTextareaHeight(textareaRef.current);
     }
-  }, [isEditing, editedPrompt]);
+  }, [isEditing, editedPrompt, adjustTextareaHeight]);
 
   const handleEditCancel = () => {
     onEditCancel();
@@ -151,7 +151,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isEditing]);
+  }, [isEditing, handleEditCancel, handleEditComplete]);
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {

@@ -5,4 +5,5 @@ export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 export { Textarea } from './textarea';
 export { Label } from './label';
 export { UserPromptBubble } from './promptbubble';
+export { Modal } from './modal';
 // ...add other UI components
