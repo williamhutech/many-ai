@@ -13,6 +13,7 @@ import MobileResultCarousel from '@/components/pages/mobileresultcarousel';
 import dynamic from 'next/dynamic';
 import React from 'react';
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
+import { BLOCKED_COUNTRIES } from '@/config/blocked-countries';
 
 const Header = ({ mode, onModeChange, onNewChat }: { 
   mode: 'fast' | 'smart', 
@@ -209,6 +210,8 @@ export default function SDKPlayground() {
     // Update models while preserving conversation history
     setModels(prevModels => {
       const providerToHistory = new Map();
+      const newModels = getDefaultModels(newMode);
+      const updatedHistories = { ...conversationHistories };
       
       // First, collect all histories by provider
       prevModels.forEach(modelId => {
@@ -218,49 +221,16 @@ export default function SDKPlayground() {
         }
       });
 
-      // Get new models for the selected mode
-      const selectedProviders = Array.from(providerToHistory.keys());
-      const newModels = prevModels.map(modelId => {
+      // Then, apply histories to new models based on provider
+      newModels.forEach(modelId => {
         const provider = getProviderForModel(modelId);
-        if (provider) {
-          const model = getModelByProviderAndMode(provider.name, newMode);
-          return model?.id || '';
-        }
-        return '';
-      }).filter(id => id !== '');
-
-      // Update conversation histories with new model IDs
-      const newHistories: typeof conversationHistories = {};
-      prevModels.forEach((oldModelId, index) => {
-        const oldProvider = getProviderForModel(oldModelId);
-        if (oldProvider && newModels[index]) {
-          const history = conversationHistories[oldModelId];
-          if (history) {
-            newHistories[newModels[index]] = [...history];
-          }
+        if (provider && providerToHistory.has(provider.name)) {
+          updatedHistories[modelId] = providerToHistory.get(provider.name);
         }
       });
 
-      // Update conversation histories state
-      setConversationHistories(newHistories);
-
-      // Update conversations results with new model order
-      setConversations(prevConversations => 
-        prevConversations.map(conv => ({
-          ...conv,
-          results: newModels.map((newModelId, index) => {
-            const provider = getProviderForModel(newModelId);
-            const oldModelId = prevModels.find(id => {
-              const oldProvider = getProviderForModel(id);
-              return oldProvider?.name === provider?.name;
-            });
-            const oldIndex = oldModelId ? prevModels.indexOf(oldModelId) : -1;
-            return oldIndex !== -1 ? conv.results[oldIndex] : '';
-          })
-        }))
-      );
-
-      return sortModels(newModels);
+      setConversationHistories(updatedHistories);
+      return newModels;
     });
   };
 
@@ -324,6 +294,58 @@ export default function SDKPlayground() {
   const [regeneratingModels, setRegeneratingModels] = useState<number[]>([]);
   const [bubbleHeights, setBubbleHeights] = useState<{ [key: number]: number }>({});
   const previousHeightRef = useRef<{ [key: number]: number }>({});
+  const [isLocationBlocked, setIsLocationBlocked] = useState(false);
+  const [blockedCountryName, setBlockedCountryName] = useState<string | null>(null);
+
+  // Check user's location on component mount
+  useEffect(() => {
+    const checkLocation = async () => {
+      try {
+        const response = await fetch('/api/location');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        if (!data.country) {
+          console.warn('⚠️ No country code received, defaulting to unblocked');
+          setIsLocationBlocked(false);
+          return;
+        }
+
+        const blockedCountry = BLOCKED_COUNTRIES.find(c => c.country === data.country);
+        const isBlocked = !!blockedCountry;
+
+        console.log('🌍 Location check result:', {
+          ip: data.ip,
+          country: data.country,
+          countryName: blockedCountry?.country_name,
+          isBlocked
+        });
+        
+        if (isBlocked && blockedCountry) {
+          console.log(`🚫 Location blocked: ${blockedCountry.country_name} detected`);
+          setIsLocationBlocked(true);
+          setBlockedCountryName(blockedCountry.country_name);
+          amplitude.track('Location Blocked', {
+            country: data.country,
+            countryName: blockedCountry.country_name,
+            ip: data.ip
+          });
+        } else {
+          console.log('✅ Location allowed:', data.country);
+          setIsLocationBlocked(false);
+          setBlockedCountryName(null);
+        }
+      } catch (error) {
+        console.error('❌ Error checking location:', error);
+        setIsLocationBlocked(false);
+        setBlockedCountryName(null);
+      }
+    };
+
+    checkLocation();
+  }, []);
 
   // Initialize Amplitude when the component mounts
   useEffect(() => {
@@ -544,11 +566,11 @@ export default function SDKPlayground() {
     const updatedConversationHistories = { ...conversationHistories };
     models.forEach((modelId, index) => {
       const history = updatedConversationHistories[modelId] || [];
-      updatedConversationHistories[modelId] = [
-        ...history,
+      history.push(
         { role: 'user', content: currentInput },
-        { role: 'assistant', content: responses[index] || '' },
-      ];
+        { role: 'assistant', content: responses[index] || '' }
+      );
+      updatedConversationHistories[modelId] = history;
     });
     setConversationHistories(updatedConversationHistories);
 
@@ -894,6 +916,42 @@ export default function SDKPlayground() {
     }
   }, [conversations]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const element = e.currentTarget;
+    const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
+    const maxHeight = lineHeight * 5; // Limit to 5 lines
+    
+    setInput(e.target.value);
+    element.style.height = 'auto';
+    
+    // Apply max height limit
+    const newHeight = Math.min(element.scrollHeight, maxHeight);
+    element.style.height = `${newHeight}px`;
+    
+    // Enable/disable scrolling based on content height
+    if (element.scrollHeight > maxHeight) {
+      element.style.overflowY = 'auto';
+    } else {
+      element.style.overflowY = 'hidden';
+    }
+    
+    // Maintain cursor position
+    const cursorPosition = e.currentTarget.selectionStart;
+    requestAnimationFrame(() => {
+      if (element && document.activeElement === element) {
+        element.selectionStart = cursorPosition;
+        element.selectionEnd = cursorPosition;
+      }
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
@@ -1081,73 +1139,59 @@ export default function SDKPlayground() {
               />
             )}
           </div>
-          <form onSubmit={handleSubmit} className="flex flex-col items-center space-y-4 w-full">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (!isLocationBlocked) {
+              handleSubmit(e);
+            }
+          }} className="flex flex-col items-center space-y-4 w-full">
             <div className="w-11/12 max-h-[40vh]">
               <Input
-                id="message-input"
                 ref={inputRef}
                 value={input}
-                onChange={(e) => {
-                  const element = e.currentTarget;
-                  const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
-                  const maxHeight = lineHeight * 5; // Limit to 5 lines
-                  
-                  setInput(e.target.value);
-                  element.style.height = 'auto';
-                  
-                  // Apply max height limit
-                  const newHeight = Math.min(element.scrollHeight, maxHeight);
-                  element.style.height = `${newHeight}px`;
-                  
-                  // Enable/disable scrolling based on content height
-                  if (element.scrollHeight > maxHeight) {
-                    element.style.overflowY = 'auto';
-                  } else {
-                    element.style.overflowY = 'hidden';
-                  }
-                  
-                  // Maintain cursor position
-                  const cursorPosition = e.currentTarget.selectionStart;
-                  requestAnimationFrame(() => {
-                    if (element && document.activeElement === element) {
-                      element.selectionStart = cursorPosition;
-                      element.selectionEnd = cursorPosition;
-                    }
-                  });
-                }}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
                 onPaste={(e) => {
-                  e.preventDefault();
-                  const cursorPosition = e.currentTarget.selectionStart;
-                  const textBeforeCursor = e.currentTarget.value.slice(0, cursorPosition);
-                  const textAfterCursor = e.currentTarget.value.slice(cursorPosition);
-                  const pastedText = e.clipboardData.getData('text').replace(/\n/g, ' ');
-                  
-                  const newValue = textBeforeCursor + pastedText + textAfterCursor;
-                  const newCursorPosition = cursorPosition + pastedText.length;
-                  
-                  setInput(newValue);
-                  
-                  // Wait for the next render cycle and check if the element exists
-                  setTimeout(() => {
-                    if (e.currentTarget) {
-                      e.currentTarget.selectionStart = newCursorPosition;
-                      e.currentTarget.selectionEnd = newCursorPosition;
-                      
-                      // Update height after cursor position is set
-                      e.currentTarget.style.height = 'auto';
-                      e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
-                    }
-                  }, 0);
+                  if (!isLocationBlocked) {
+                    e.preventDefault();
+                    const cursorPosition = e.currentTarget.selectionStart;
+                    const textBeforeCursor = e.currentTarget.value.slice(0, cursorPosition);
+                    const textAfterCursor = e.currentTarget.value.slice(cursorPosition);
+                    const pastedText = e.clipboardData.getData('text').replace(/\n/g, ' ');
+                    
+                    const newValue = textBeforeCursor + pastedText + textAfterCursor;
+                    const newCursorPosition = cursorPosition + pastedText.length;
+                    
+                    setInput(newValue);
+                    
+                    // Wait for the next render cycle and check if the element exists
+                    setTimeout(() => {
+                      if (e.currentTarget) {
+                        e.currentTarget.selectionStart = newCursorPosition;
+                        e.currentTarget.selectionEnd = newCursorPosition;
+                        
+                        // Update height after cursor position is set
+                        e.currentTarget.style.height = 'auto';
+                        e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                      }
+                    }, 0);
+                  }
                 }}
-                onSubmit={handleSubmit}
-                placeholder="Enter your message..."
+                disabled={isLocationBlocked}
+                placeholder={isLocationBlocked ? `We're sorry, this service is not offered in ${blockedCountryName} at the moment. Please stay tuned!` : "Enter your message..."}
+                className={cn(
+                  isLocationBlocked && "bg-[#F7F7F8] text-zinc-600"
+                )}
                 leftElement={
                   <button
                     type="button"
                     className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors"
                     onClick={() => {
-                      console.log('Attachment button clicked');
+                      if (!isLocationBlocked) {
+                        console.log('Attachment button clicked');
+                      }
                     }}
+                    disabled={isLocationBlocked}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -1168,13 +1212,13 @@ export default function SDKPlayground() {
                 rightElement={
                   <button
                     type="submit"
-                    disabled={isLoading || input.trim() === ''}
+                    disabled={isLoading || input.trim() === '' || isLocationBlocked}
                     className={cn(
                       "w-7 h-7 flex items-center justify-center rounded-md transition-colors",
                       input.trim() !== '' 
                         ? "bg-zinc-200 hover:bg-zinc-300"
                         : "bg-zinc-100 hover:bg-zinc-200",
-                      (isLoading || input.trim() === '') && "opacity-100 cursor-not-allowed"
+                      (isLoading || isLocationBlocked) && "opacity-50 cursor-not-allowed"
                     )}
                   >
                     {isLoading ? (

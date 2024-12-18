@@ -94,29 +94,29 @@ const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
             "flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm",
             "ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none",
             "focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+            "disabled:cursor-not-allowed disabled:opacity-75 disabled:bg-[#F7F7F8]",
+            "disabled:border-zinc-200 disabled:text-zinc-600 disabled:placeholder:text-zinc-600",
             "min-h-[40px] resize-none overflow-y-auto",
             leftElement && "pl-10",
             rightElement && "pr-20",
             className
           )}
-          ref={(node) => {
-            if (typeof ref === 'function') {
-              ref(node);
-            } else if (ref) {
-              (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-            }
-            if (textareaRef.current) {
-              (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = node;
-            }
-          }}
+          ref={ref || textareaRef}
+          onInput={!props.disabled ? handleInput : undefined}
+          onKeyDown={!props.disabled ? handleKeyDown : undefined}
           rows={1}
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
           {...props}
+          style={{
+            ...props.style,
+            pointerEvents: props.disabled ? 'none' : 'auto',
+            userSelect: props.disabled ? 'none' : 'auto',
+          }}
         />
         {rightElement && (
-          <div className="absolute right-2 flex items-center h-full">
+          <div className={cn(
+            "absolute right-2 flex items-center h-full",
+            props.disabled && "opacity-50 pointer-events-none"
+          )}>
             {rightElement}
           </div>
         )}
