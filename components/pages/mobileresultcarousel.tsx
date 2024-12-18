@@ -174,13 +174,6 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
             </Button>
           )}
         </div>
-
-        {/* Model Counter */}
-        <div className="absolute bottom-16 left-0 right-0 flex justify-center">
-          <div className="bg-gray-100 rounded-full px-3 py-1 text-sm">
-            {currentIndex + 1} / {totalSlides}
-          </div>
-        </div>
       </div>
     </div>
   );

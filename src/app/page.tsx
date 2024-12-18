@@ -206,20 +206,61 @@ export default function SDKPlayground() {
       newMode: newMode,
     });
 
-    // Update models when mode changes
+    // Update models while preserving conversation history
     setModels(prevModels => {
-      const selectedProviders = prevModels.map(modelId => {
+      const providerToHistory = new Map();
+      
+      // First, collect all histories by provider
+      prevModels.forEach(modelId => {
         const provider = getProviderForModel(modelId);
-        return provider?.name;
-      }).filter(Boolean) as string[];
-
-      const newModels = selectedProviders.map(providerName => {
-        const model = getModelByProviderAndMode(providerName, newMode);
-        return model?.id || '';
+        if (provider && conversationHistories[modelId]) {
+          providerToHistory.set(provider.name, conversationHistories[modelId]);
+        }
       });
 
-      // Return sorted models according to providerOrder
-      return sortModels(newModels.filter(id => id !== ''));
+      // Get new models for the selected mode
+      const selectedProviders = Array.from(providerToHistory.keys());
+      const newModels = prevModels.map(modelId => {
+        const provider = getProviderForModel(modelId);
+        if (provider) {
+          const model = getModelByProviderAndMode(provider.name, newMode);
+          return model?.id || '';
+        }
+        return '';
+      }).filter(id => id !== '');
+
+      // Update conversation histories with new model IDs
+      const newHistories: typeof conversationHistories = {};
+      prevModels.forEach((oldModelId, index) => {
+        const oldProvider = getProviderForModel(oldModelId);
+        if (oldProvider && newModels[index]) {
+          const history = conversationHistories[oldModelId];
+          if (history) {
+            newHistories[newModels[index]] = [...history];
+          }
+        }
+      });
+
+      // Update conversation histories state
+      setConversationHistories(newHistories);
+
+      // Update conversations results with new model order
+      setConversations(prevConversations => 
+        prevConversations.map(conv => ({
+          ...conv,
+          results: newModels.map((newModelId, index) => {
+            const provider = getProviderForModel(newModelId);
+            const oldModelId = prevModels.find(id => {
+              const oldProvider = getProviderForModel(id);
+              return oldProvider?.name === provider?.name;
+            });
+            const oldIndex = oldModelId ? prevModels.indexOf(oldModelId) : -1;
+            return oldIndex !== -1 ? conv.results[oldIndex] : '';
+          })
+        }))
+      );
+
+      return sortModels(newModels);
     });
   };
 
@@ -450,7 +491,6 @@ export default function SDKPlayground() {
     setIsStreaming(true);
     const currentInput = input;
     setInput('');
-    // Reset fusion result for new prompt
 
     // Reset input box height
     if (inputRef.current) {
@@ -475,6 +515,28 @@ export default function SDKPlayground() {
       return newConversations;
     });
 
+    // Function to handle scrolling
+    const scrollToLatest = () => {
+      if (latestConversationRef.current) {
+        const isMobile = window.innerWidth <= 768;
+        const element = latestConversationRef.current;
+        const headerHeight = document.querySelector('header')?.offsetHeight ?? 0;
+        const offset = isMobile ? headerHeight + 20 : headerHeight + 100;
+
+        // Wait for next frame to ensure DOM is updated
+        requestAnimationFrame(() => {
+          const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+          window.scrollTo({
+            top: elementTop - offset,
+            behavior: 'smooth'
+          });
+        });
+      }
+    };
+
+    // Initial scroll after adding new conversation
+    requestAnimationFrame(scrollToLatest);
+
     // Fetch responses from all models simultaneously
     const responses = await Promise.all(models.map((_, index) => fetchModelResponse(index, currentInput)));
 
@@ -498,7 +560,12 @@ export default function SDKPlayground() {
     });
 
     // Automatically trigger fusion after responses are loaded
-    handleFusion('Multi-Model Response', true, updatedConversationHistories);
+    await handleFusion('Multi-Model Response', true, updatedConversationHistories);
+
+    // Final scroll after all content is loaded
+    requestAnimationFrame(() => {
+      setTimeout(scrollToLatest, 100);
+    });
 
     setIsLoading(false);
     setIsStreaming(false);
@@ -512,15 +579,17 @@ export default function SDKPlayground() {
   };
 
   useEffect(() => {
-    if (latestConversationRef.current && window.innerWidth <= 768) {
-      latestConversationRef.current.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-      });
+    if (latestConversationRef.current) {
+      const isMobile = window.innerWidth <= 768;
+      const element = latestConversationRef.current;
       const headerHeight = document.querySelector('header')?.offsetHeight ?? 0;
-      window.scrollBy(0, -headerHeight - 10); // Adjust scroll position by header height
-    } else if (latestConversationRef.current) {
-      latestConversationRef.current.scrollIntoView({ behavior: 'smooth' });
+      const offset = isMobile ? headerHeight + 20 : headerHeight + 100;
+
+      const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({
+        top: elementTop - offset,
+        behavior: 'smooth'
+      });
     }
   }, [conversations]);
 
@@ -805,6 +874,25 @@ export default function SDKPlayground() {
       setStreamingModels(prev => prev.filter(m => m !== provider.nickname));
     }
   };
+
+  useEffect(() => {
+    if (conversations.length > 0) {
+      requestAnimationFrame(() => {
+        if (latestConversationRef.current) {
+          const isMobile = window.innerWidth <= 768;
+          const element = latestConversationRef.current;
+          const headerHeight = document.querySelector('header')?.offsetHeight ?? 0;
+          const offset = isMobile ? headerHeight + 20 : headerHeight + 100;
+
+          const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+          window.scrollTo({
+            top: elementTop - offset,
+            behavior: 'smooth'
+          });
+        }
+      });
+    }
+  }, [conversations]);
 
   // Render the user interface with header, main content, and footer
   return (

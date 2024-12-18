@@ -77,7 +77,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     element.style.height = '24px';
     const scrollHeight = element.scrollHeight;
     const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
-    const maxHeight = lineHeight * 3;
+    const maxHeight = Math.min(window.innerHeight * 0.4, lineHeight * 10); // 40% of viewport height or 10 lines
     element.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
     
     if (scrollHeight > maxHeight) {
@@ -85,7 +85,17 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     } else {
       element.style.overflowY = 'hidden';
     }
+
+    // Update bubble width based on content
+    const width = calculateOptimalWidth(element.value, true);
+    setBubbleWidth(width);
   };
+
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      adjustTextareaHeight(textareaRef.current);
+    }
+  }, [isEditing, editedPrompt]);
 
   const handleEditCancel = () => {
     onEditCancel();
@@ -176,98 +186,44 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
               onChange={(e) => {
                 setEditedPrompt(e.target.value);
                 adjustTextareaHeight(e.target);
-                setBubbleWidth(calculateOptimalWidth(e.target.value));
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleEditComplete();
-                } else if (e.key === 'Escape') {
-                  e.preventDefault();
-                  handleEditCancel();
-                }
-              }}
-              className="bg-transparent border-none focus:outline-none resize-none text-sm text-gray-800 w-full p-0 m-0"
-              style={{
-                height: '24px',
-                overflow: 'hidden',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                display: '-webkit-box',
-                WebkitLineClamp: '3',
-                WebkitBoxOrient: 'vertical',
-                lineHeight: '1.5',
-                paddingRight: isHovered ? '48px' : '8px',
-              }}
+              className="w-full bg-transparent outline-none resize-none text-sm"
               autoFocus
             />
-            <button
-              onClick={handleEditComplete}
-              className="absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-zinc-400"
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+              <button
+                onClick={handleEditComplete}
+                className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
               >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </button>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+              <button
+                onClick={handleEditCancel}
+                className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="p-3 relative">
-            <div 
-              className="text-sm text-gray-800 mobile-text"
-              style={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                overflow: 'hidden',
-                display: '-webkit-box',
-                WebkitLineClamp: '3',
-                WebkitBoxOrient: 'vertical',
-                lineHeight: '1.5',
-                textAlign: 'justify',
-                textJustify: 'inter-word',
-                paddingRight: isLatestPrompt && (isHovered || window.innerWidth <= 768) ? '30px' : '0px',
-                transition: 'padding-right 0.2s ease-out'
-              }}
-            >
-              {prompt}
-            </div>
-            <button
-              onClick={handleEditStart}
-              className={cn(
-                "absolute right-2 top-2 p-1.5 hover:bg-zinc-200 rounded-md transition-all duration-200 bg-gray-100",
-                isLatestPrompt 
-                  ? window.innerWidth <= 768 
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100"
-                  : "hidden"
-              )}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-zinc-400"
+          <div className="p-3 text-sm relative group">
+            {prompt}
+            {isLatestPrompt && !isEditing && isHovered && window.innerWidth > 768 && (
+              <button
+                onClick={handleEditStart}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200 opacity-0 group-hover:opacity-100"
               >
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                <path d="m15 5 4 4"/>
-              </svg>
-            </button>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+            )}
           </div>
         )}
       </div>
