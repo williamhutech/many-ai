@@ -212,10 +212,26 @@ export default function SDKPlayground() {
       newMode: newMode,
     });
 
-    // Update models while preserving conversation history
+    // Update models while preserving conversation history and enabled providers
     setModels(prevModels => {
+      // Get the currently enabled providers
+      const enabledProviders = new Set(
+        prevModels.map(modelId => {
+          const provider = getProviderForModel(modelId);
+          return provider?.name;
+        }).filter(Boolean)
+      );
+
+      // Get models for the enabled providers in the new mode
+      const newModels = Array.from(enabledProviders)
+        .map(providerName => {
+          const model = getModelByProviderAndMode(providerName!, newMode);
+          return model?.id;
+        })
+        .filter(Boolean) as string[];
+
+      // Preserve conversation histories
       const providerToHistory = new Map();
-      const newModels = getDefaultModels(newMode);
       const updatedHistories = { ...conversationHistories };
       
       // First, collect all histories by provider
