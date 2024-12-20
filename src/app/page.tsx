@@ -42,22 +42,22 @@ const Header = ({ mode, onModeChange, onNewChat }: {
   const handleHistoryClick = () => {
     // Create and append overlay with fade-in animation
     const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 bg-black opacity-0 z-40 transition-opacity duration-300 ease-in-out';
+    overlay.className = 'fixed inset-0 bg-black/30 backdrop-blur-sm z-50 animate-in fade-in duration-200';
     document.body.appendChild(overlay);
 
     // Create and append sidebar with slide-in animation
     const sidebar = document.createElement('div');
-    sidebar.className = 'fixed left-0 top-0 h-full w-64 bg-white z-50 transform -translate-x-full transition-all duration-300 ease-in-out shadow-2xl';
+    sidebar.className = 'fixed left-0 top-0 h-full w-64 bg-white/95 backdrop-blur-sm z-[51] shadow-lg animate-in slide-in-from-left duration-200';
     sidebar.innerHTML = `
-      <div class="flex justify-between items-center p-4">
-        <h2 class="text-base font-semibold font-inter pl-4 pt-1">Chat History</h2>
-        <button class="text-gray-500 hover:text-gray-700 transition-colors duration-200" id="closeSidebar">
+      <div class="flex justify-between items-center p-6">
+        <h2 class="text-xl font-semibold">Chat History</h2>
+        <button class="text-gray-400 hover:text-gray-600 transition-colors" id="closeSidebar">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
-      <div class="absolute inset-0 flex items-center justify-center text-sm text-gray-500 mt-16">
+      <div class="flex items-center justify-center h-full text-sm text-gray-500">
         Feature coming soon!
       </div>
     `;
@@ -66,26 +66,20 @@ const Header = ({ mode, onModeChange, onNewChat }: {
     // Prevent body scroll when sidebar is open
     document.body.style.overflow = 'hidden';
 
-    // Trigger animations after a small delay
-    requestAnimationFrame(() => {
-      overlay.style.opacity = '0.5';
-      sidebar.classList.remove('-translate-x-full');
-    });
-
     // Add click handler to close with animations
     const handleClose = () => {
-      overlay.style.opacity = '0';
-      sidebar.classList.add('-translate-x-full');
+      overlay.classList.remove('animate-in', 'fade-in');
+      overlay.classList.add('animate-out', 'fade-out');
+      
+      sidebar.classList.remove('animate-in', 'slide-in-from-left');
+      sidebar.classList.add('animate-out', 'slide-out-to-left');
       
       // Remove elements and restore body scroll after animation completes
       setTimeout(() => {
         document.body.style.overflow = '';
-        // Add a small delay between opacity and removal
-        setTimeout(() => {
-          overlay.remove();
-          sidebar.remove();
-        }, 50);
-      }, 300);
+        overlay.remove();
+        sidebar.remove();
+      }, 200);
     };
 
     overlay.addEventListener('click', handleClose);

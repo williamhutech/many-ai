@@ -24,11 +24,11 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         className={cn(
           "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
           "w-[calc(100%-2rem)] sm:w-full max-w-lg",
-          "max-h-[85vh] bg-white rounded-lg shadow-lg p-4 sm:p-6"
+          "max-h-[85vh] bg-white rounded-lg shadow-lg p-6 sm:p-8"
         )}
       >
         {/* Combined Header & Content */}
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">{title}</h2>
           <button
             onClick={onClose}
