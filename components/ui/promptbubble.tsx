@@ -33,7 +33,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     setEditedPrompt(prompt);
   }, [prompt]);
 
-  const calculateOptimalWidth = (text: string, forceHoverState?: boolean) => {
+  const calculateOptimalWidth = React.useCallback((text: string, forceHoverState?: boolean) => {
     const maxWidth = window.innerWidth * 0.75;
     const isMobile = window.innerWidth <= 768;
     
@@ -62,7 +62,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     }
     
     return `${Math.min(optimalWidth, maxWidth)}px`;
-  };
+  }, [isEditing, isLatestPrompt]);
 
   useEffect(() => {
     const calculateInitialWidth = () => {
@@ -73,11 +73,11 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     calculateInitialWidth();
   }, [prompt, calculateOptimalWidth]);
 
-  const adjustTextareaHeight = (element: HTMLTextAreaElement) => {
+  const adjustTextareaHeight = React.useCallback((element: HTMLTextAreaElement) => {
     element.style.height = '24px';
     const scrollHeight = element.scrollHeight;
     const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
-    const maxHeight = Math.min(window.innerHeight * 0.4, lineHeight * 10); // 40% of viewport height or 10 lines
+    const maxHeight = Math.min(window.innerHeight * 0.4, lineHeight * 10);
     element.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
     
     if (scrollHeight > maxHeight) {
@@ -86,10 +86,9 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
       element.style.overflowY = 'hidden';
     }
 
-    // Update bubble width based on content
     const width = calculateOptimalWidth(element.value, true);
     setBubbleWidth(width);
-  };
+  }, [calculateOptimalWidth]);
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
@@ -97,14 +96,14 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     }
   }, [isEditing, editedPrompt, adjustTextareaHeight]);
 
-  const handleEditCancel = () => {
+  const handleEditCancel = React.useCallback(() => {
     onEditCancel();
     setEditedPrompt(prompt);
     setIsHovered(false);
     setBubbleWidth(calculateOptimalWidth(prompt, false));
-  };
+  }, [onEditCancel, prompt, calculateOptimalWidth]);
 
-  const handleEditComplete = () => {
+  const handleEditComplete = React.useCallback(() => {
     const trimmedPrompt = editedPrompt.trim();
     if (trimmedPrompt !== '' && trimmedPrompt !== prompt) {
       setEditedPrompt(trimmedPrompt);
@@ -116,7 +115,7 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     }
     setIsHovered(false);
     setBubbleWidth(calculateOptimalWidth(trimmedPrompt, false));
-  };
+  }, [editedPrompt, prompt, onEditComplete, onRegenerateFromEdit, index, calculateOptimalWidth]);
 
   const handleEditStart = () => {
     amplitude.track('Editing Prompt', {

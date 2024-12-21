@@ -3,6 +3,7 @@ import { createEditor, Descendant, Element as SlateElement, Text, BaseEditor, No
 import { Slate, Editable, withReact, ReactEditor } from 'slate-react'
 import { withHistory, HistoryEditor } from 'slate-history'
 import { cn } from "@/lib/utils"
+import { RenderElementProps, RenderLeafProps, RenderPlaceholderProps } from 'slate-react';
 
 // Define custom types for Slate
 type CustomText = { 
@@ -148,11 +149,16 @@ const Input = React.forwardRef<HTMLDivElement, InputProps>(
       }
     }, [props.value, editor, defaultLines]);
 
-    const renderElement = React.useCallback((props: any) => {
+    const renderElement = React.useCallback((props: RenderElementProps) => {
       return <p {...props.attributes}>{props.children}</p>
     }, []);
 
-    const renderLeaf = React.useCallback(({ attributes, children, leaf }: any) => {
+    const renderLeaf = React.useCallback(({ attributes, children, leaf }: RenderLeafProps & {
+      leaf: {
+        highlight?: boolean;
+        prefix?: string;
+      }
+    }) => {
       if (leaf.highlight) {
         return (
           <span 
@@ -204,7 +210,7 @@ const Input = React.forwardRef<HTMLDivElement, InputProps>(
       props.onKeyDown?.(e);
     };
 
-    const renderPlaceholder = React.useCallback((props: any) => {
+    const renderPlaceholder = React.useCallback(({ attributes, children }: RenderPlaceholderProps) => {
       const style: React.CSSProperties = {
         position: 'absolute',
         top: '50%',
@@ -223,8 +229,8 @@ const Input = React.forwardRef<HTMLDivElement, InputProps>(
       };
 
       return (
-        <span {...props} style={style}>
-          {props.children}
+        <span {...attributes} style={style}>
+          {children}
         </span>
       );
     }, [editor]);
