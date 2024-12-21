@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "debug": "^4.3.7",
     "dotenv": "^16.4.5",
+    "framer-motion": "^10.18.0",
     "groq-sdk": "^0.7.0",
     "lucide-react": "^0.439.0",
     "next": "^14.2.12",
@@ -41,12 +42,14 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.0",
     "semver": "^7.6.3",
+    "slate": "^0.112.0",
+    "slate-history": "^0.110.3",
+    "slate-react": "^0.112.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "tar": "^7.4.3",
     "together-ai": "^0.6.0-alpha.4",
-    "vercel": "^37.8.0",
-    "framer-motion": "^10.18.0"
+    "vercel": "^37.8.0"
   },
   "devDependencies": {
     "@types/node": "^20",

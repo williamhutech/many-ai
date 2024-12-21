@@ -1,125 +1,276 @@
 import * as React from "react"
+import { createEditor, Descendant, Element as SlateElement, Text, BaseEditor, Node, Range, Editor, Transforms } from 'slate'
+import { Slate, Editable, withReact, ReactEditor } from 'slate-react'
+import { withHistory, HistoryEditor } from 'slate-history'
 import { cn } from "@/lib/utils"
 
-export interface InputProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  onSubmit?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-  leftElement?: React.ReactNode;
-  rightElement?: React.ReactNode;
+// Define custom types for Slate
+type CustomText = { 
+  text: string;
+  highlight?: boolean;
 }
 
-const Input = React.forwardRef<HTMLTextAreaElement, InputProps>(
+type CustomElement = { 
+  type: 'paragraph' | 'mention';
+  children: CustomText[];
+}
+
+declare module 'slate' {
+  interface CustomTypes {
+    Editor: BaseEditor & ReactEditor & HistoryEditor & {
+      placeholder?: string;
+    }
+    Element: CustomElement
+    Text: CustomText
+  }
+}
+
+// Type guard for CustomElement
+const isCustomElement = (node: Node): node is CustomElement => {
+  return SlateElement.isElement(node) && 'type' in node && node.type === 'paragraph';
+};
+
+export interface InputProps {
+  className?: string;
+  onSubmit?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  leftElement?: React.ReactNode;
+  rightElement?: React.ReactNode;
+  value?: string;
+  onChange?: (e: { target: { value: string } }) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLDivElement>) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}
+
+const withMentions = (editor: BaseEditor & ReactEditor & HistoryEditor) => {
+  const { isInline, markableVoid } = editor;
+
+  editor.isInline = element => {
+    return (element as CustomElement).type === 'mention' ? true : isInline(element);
+  };
+
+  editor.markableVoid = element => {
+    return (element as CustomElement).type === 'mention' || markableVoid(element);
+  };
+
+  return editor;
+};
+
+const Input = React.forwardRef<HTMLDivElement, InputProps>(
   ({ className, onSubmit, leftElement, rightElement, ...props }, ref) => {
-    const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
-    const [initialHeight, setInitialHeight] = React.useState<number>(0);
+    const [defaultLines, setDefaultLines] = React.useState(2); // Default to desktop
+    
+    const editor = React.useMemo(() => {
+      return withMentions(withHistory(withReact(createEditor())));
+    }, []);
 
+    // Move window check to useEffect
     React.useEffect(() => {
-      if (textareaRef.current && !initialHeight) {
-        setInitialHeight(textareaRef.current.clientHeight);
-      }
-    }, [initialHeight]);
+      if (typeof window !== 'undefined') {
+        setDefaultLines(window.innerWidth <= 768 ? 3 : 2);
+        
+        const handleResize = () => {
+          setDefaultLines(window.innerWidth <= 768 ? 3 : 2);
+        };
 
-    const handleInput = () => {
-      const textarea = textareaRef.current;
-      if (textarea) {
-        textarea.style.height = 'auto';
-        const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight);
-        const maxHeight = lineHeight * 5; // Limit to 5 lines
-        
-        const newHeight = Math.min(textarea.scrollHeight, maxHeight);
-        textarea.style.height = `${newHeight}px`;
-        
-        if (textarea.scrollHeight > maxHeight) {
-          textarea.style.overflowY = 'auto';
-        } else {
-          textarea.style.overflowY = 'hidden';
-        }
-        
-        // Calculate footer height including all elements
-        const isMobile = window.innerWidth <= 768;
-        const safeAreaInset = isMobile ? parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0') : 0;
-        const footerPadding = isMobile ? 16 : 32;
-        const streamingStatusHeight = 24;
-        
-        const footerHeight = newHeight + footerPadding + streamingStatusHeight + safeAreaInset;
-        document.documentElement.style.setProperty('--footer-height', `${footerHeight}px`);
-        
-        // Adjust main content padding on mobile
-        if (isMobile) {
-          document.querySelector('main')?.style.setProperty(
-            'padding-bottom',
-            `${footerHeight + 16}px`
-          );
-        }
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
       }
-    };
+    }, []);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        if (onSubmit && e.currentTarget.value.trim()) {
-          onSubmit(e);
-          // Reset height after submission
-          if (textareaRef.current) {
-            const isMobile = window.innerWidth <= 768;
-            const baseHeight = isMobile ? 40 : initialHeight;
-            textareaRef.current.style.height = `${baseHeight}px`;
-            
-            // Reset footer height with mobile considerations
-            const footerHeight = isMobile ? 80 : 80;
-            document.documentElement.style.setProperty('--footer-height', `${footerHeight}px`);
-            
-            // Reset main content padding on mobile
-            if (isMobile) {
-              document.querySelector('main')?.style.setProperty(
-                'padding-bottom',
-                `${footerHeight + 16}px`
-              );
+    const [value, setValue] = React.useState<Descendant[]>([{
+      type: 'paragraph',
+      children: [{ text: props.value || '' }]
+    }]);
+
+    const decorate = React.useCallback(([node, path]: [Node, number[]]) => {
+      const ranges: Range[] = [];
+
+      if (!Text.isText(node) || !node.text) {
+        return ranges;
+      }
+
+      const { text } = node;
+      
+      // Match words starting with @ or #
+      const pattern = /([#@])\w+\b/g;
+      let match;
+
+      while ((match = pattern.exec(text)) !== null) {
+        if (match.index !== undefined) {
+          const start = match.index;
+          const end = start + match[0].length;
+          
+          // Create range only if path is valid
+          if (path && Array.isArray(path)) {
+            const range = {
+              anchor: { path, offset: start },
+              focus: { path, offset: end },
+              highlight: true,
+              prefix: match[1] // Store @ or # for styling
+            } as Range & { highlight: boolean; prefix: string };
+
+            // Validate range before adding
+            if (Editor.string(editor, range)) {
+              ranges.push(range);
             }
           }
         }
       }
+
+      return ranges;
+    }, [editor]);
+
+    React.useEffect(() => {
+      try {
+        const newValue = [{
+          type: 'paragraph' as const,
+          children: [{ text: props.value || '' }]
+        }];
+        setValue(newValue);
+        
+        // Reset height when value is cleared
+        if (!props.value && containerRef.current) {
+          const lineHeight = parseInt(window.getComputedStyle(containerRef.current).lineHeight);
+          const defaultHeight = lineHeight * defaultLines;
+          containerRef.current.style.height = `${defaultHeight}px`;
+        }
+        
+        // Only set selection if editor has focus
+        if (ReactEditor.isFocused(editor)) {
+          const point = { path: [0, 0], offset: (props.value || '').length };
+          editor.selection = { anchor: point, focus: point };
+        }
+      } catch (error) {
+        console.error('Error updating editor value:', error);
+      }
+    }, [props.value, editor, defaultLines]);
+
+    const renderElement = React.useCallback((props: any) => {
+      return <p {...props.attributes}>{props.children}</p>
+    }, []);
+
+    const renderLeaf = React.useCallback(({ attributes, children, leaf }: any) => {
+      if (leaf.highlight) {
+        return (
+          <span 
+            {...attributes} 
+            className={cn(
+              leaf.prefix === '@' && "text-purple-600",
+              leaf.prefix === '#' && "text-blue-600"
+            )}
+          >
+            {children}
+          </span>
+        );
+      }
+      return <span {...attributes}>{children}</span>;
+    }, []);
+
+    const handleChange = (newValue: Descendant[]) => {
+      setValue(newValue);
+      
+      // Normalize the value to ensure valid state
+      Editor.normalize(editor, { force: true });
+      
+      const plainText = newValue
+        .map(n => SlateElement.isElement(n) ? n.children.map(c => Text.isText(c) ? c.text : '').join('') : '')
+        .join('\n');
+      props.onChange?.({ target: { value: plainText } });
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        onSubmit?.(e);
+        
+        // Clear content using normalized Transforms
+        Transforms.delete(editor, {
+          at: Editor.range(editor, []),
+        });
+        
+        // Reset the editor state properly
+        setValue([{ 
+          type: 'paragraph',
+          children: [{ text: '' }]
+        }]);
+        
+        // Ensure proper focus and selection
+        ReactEditor.focus(editor);
+        Transforms.select(editor, { path: [0, 0], offset: 0 });
+      }
+      props.onKeyDown?.(e);
+    };
+
+    const renderPlaceholder = React.useCallback((props: any) => {
+      const style: React.CSSProperties = {
+        position: 'absolute',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        color: '#9ca3af',
+        pointerEvents: 'none',
+        display: 'inline-block',
+        width: 'calc(100% - 6rem)',
+        paddingLeft: '0.5rem',
+        paddingRight: '0.5rem',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        opacity: Editor.string(editor, []) ? 0 : 1,
+        transition: 'opacity 0.2s'
+      };
+
+      return (
+        <span {...props} style={style}>
+          {props.children}
+        </span>
+      );
+    }, [editor]);
+
     return (
-      <div ref={containerRef} className="relative flex items-end w-full">
-        {leftElement && (
-          <div className="absolute left-2 flex items-center h-full">
-            {leftElement}
+      <div className="relative flex items-end w-full">
+        <Slate editor={editor} initialValue={value} onChange={handleChange}>
+          <div ref={containerRef} className="relative w-full">
+            <div className="relative flex items-center">
+              {/* Left element (attachment button) */}
+              {leftElement && (
+                <div className="absolute left-3 flex items-center h-full z-10">
+                  {leftElement}
+                </div>
+              )}
+              
+              <Editable
+                className={cn(
+                  "w-full bg-white text-sm",
+                  "rounded-lg border",
+                  "px-12 py-3",
+                  "min-h-[52px]",
+                  "resize-none overflow-y-auto leading-6",
+                  "transition-colors duration-200",
+                  "focus-visible:outline-none focus-visible:border-zinc-200",
+                  "hover:border-zinc-100",
+                  props.disabled && "bg-[#F7F7F8] text-zinc-600",
+                  className
+                )}
+                placeholder={props.placeholder}
+                readOnly={props.disabled}
+                decorate={decorate}
+                renderLeaf={renderLeaf}
+                renderPlaceholder={renderPlaceholder}
+                onKeyDown={handleKeyDown}
+              />
+              
+              {/* Right element (submit button) */}
+              {rightElement && (
+                <div className="absolute right-3 flex items-center h-full z-10">
+                  {rightElement}
+                </div>
+              )}
+            </div>
           </div>
-        )}
-        <textarea
-          className={cn(
-            "flex w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm",
-            "ring-offset-white placeholder:text-zinc-500 focus-visible:outline-none",
-            "focus-visible:ring-1 focus-visible:ring-zinc-600 focus-visible:ring-offset-1",
-            "disabled:cursor-not-allowed disabled:opacity-75 disabled:bg-[#F7F7F8]",
-            "disabled:border-zinc-200 disabled:text-zinc-600 disabled:placeholder:text-zinc-600",
-            "min-h-[96px] sm:min-h-[64px] resize-none overflow-y-auto", 
-            leftElement && "pl-10",
-            rightElement && "pr-20",
-            className
-          )}
-          ref={ref || textareaRef}
-          onInput={!props.disabled ? handleInput : undefined}
-          onKeyDown={!props.disabled ? handleKeyDown : undefined}
-          rows={1}
-          {...props}
-          style={{
-            ...props.style,
-            pointerEvents: props.disabled ? 'none' : 'auto',
-            userSelect: props.disabled ? 'none' : 'auto',
-          }}
-        />
-        {rightElement && (
-          <div className={cn(
-            "absolute right-2 flex items-center h-full",
-            props.disabled && "opacity-50 pointer-events-none"
-          )}>
-            {rightElement}
-          </div>
-        )}
+        </Slate>
       </div>
     );
   }

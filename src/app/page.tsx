@@ -295,7 +295,7 @@ export default function SDKPlayground() {
   const latestConversationRef = useRef<HTMLDivElement>(null);
   const [isInitialState, setIsInitialState] = useState(true);
   const [isDismissing, setIsDismissing] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLDivElement>(null);
   const [streamingModels, setStreamingModels] = useState<string[]>([]);
   const [isInitialFooter, setIsInitialFooter] = useState(true);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -933,13 +933,15 @@ export default function SDKPlayground() {
     }
   }, [conversations]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const element = e.currentTarget;
+  const handleInputChange = (e: { target: { value: string } }) => {
+    setInput(e.target.value);
+    
+    // Get the div element
+    const element = inputRef.current;
+    if (!element) return;
+    
     const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
     const maxHeight = lineHeight * 5; // Limit to 5 lines
-    
-    setInput(e.target.value);
-    element.style.height = 'auto';
     
     // Apply max height limit
     const newHeight = Math.min(element.scrollHeight, maxHeight);
@@ -951,18 +953,9 @@ export default function SDKPlayground() {
     } else {
       element.style.overflowY = 'hidden';
     }
-    
-    // Maintain cursor position
-    const cursorPosition = e.currentTarget.selectionStart;
-    requestAnimationFrame(() => {
-      if (element && document.activeElement === element) {
-        element.selectionStart = cursorPosition;
-        element.selectionEnd = cursorPosition;
-      }
-    });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
@@ -1176,30 +1169,17 @@ export default function SDKPlayground() {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                onPaste={(e) => {
+                onPaste={(e: React.ClipboardEvent<HTMLDivElement>) => {
                   if (!isLocationBlocked) {
                     e.preventDefault();
-                    const cursorPosition = e.currentTarget.selectionStart;
-                    const textBeforeCursor = e.currentTarget.value.slice(0, cursorPosition);
-                    const textAfterCursor = e.currentTarget.value.slice(cursorPosition);
-                    const pastedText = e.clipboardData.getData('text').replace(/\n/g, ' ');
+                    const text = e.clipboardData.getData('text').replace(/\n/g, ' ');
+                    const selection = window.getSelection();
+                    const range = selection?.getRangeAt(0);
                     
-                    const newValue = textBeforeCursor + pastedText + textAfterCursor;
-                    const newCursorPosition = cursorPosition + pastedText.length;
-                    
-                    setInput(newValue);
-                    
-                    // Wait for the next render cycle and check if the element exists
-                    setTimeout(() => {
-                      if (e.currentTarget) {
-                        e.currentTarget.selectionStart = newCursorPosition;
-                        e.currentTarget.selectionEnd = newCursorPosition;
-                        
-                        // Update height after cursor position is set
-                        e.currentTarget.style.height = 'auto';
-                        e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
-                      }
-                    }, 0);
+                    if (range) {
+                      const newValue = input.slice(0, range.startOffset) + text + input.slice(range.endOffset);
+                      setInput(newValue);
+                    }
                   }
                 }}
                 disabled={isLocationBlocked}
@@ -1210,7 +1190,11 @@ export default function SDKPlayground() {
                 leftElement={
                   <button
                     type="button"
-                    className="p-1.5 hover:bg-zinc-100 rounded-md transition-colors"
+                    className={cn(
+                      "w-7 h-7 flex items-center justify-center rounded-md transition-colors",
+                      "hover:bg-zinc-100",
+                      isLocationBlocked && "opacity-50 cursor-not-allowed"
+                    )}
                     onClick={() => {
                       if (!isLocationBlocked) {
                         console.log('Attachment button clicked');

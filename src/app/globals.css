@@ -51,6 +51,13 @@ body {
   .text-xs-custom {
     font-size: 0.8rem;
   }
+  .highlight-all {
+    color: purple;
+  }
+  /* Add a specific rule for the placeholder to ensure it's not affected */
+  textarea::placeholder {
+    color: hsl(var(--muted-foreground)) !important;
+  }
 }
 
 .prose p {
@@ -352,4 +359,8 @@ header {
     padding: 1rem;
     background: linear-gradient(to top, white, transparent);
   }
+}
+
+.text-purple-600 {
+  color: rgb(147, 51, 234);
 }
