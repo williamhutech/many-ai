@@ -44,6 +44,7 @@ export const ResultCard = ({
   isMobile,
 }: ResultCardProps) => {
   const textareaRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const shouldShowStreaming = isLatestConversation && isStreaming;
 
@@ -97,6 +98,12 @@ export const ResultCard = ({
       setIsLoadingContent(false);
     }
   }, [isStreaming, isFusionLoading, isLatestConversation, isFusionCard, isRegenerating]);
+
+  useEffect(() => {
+    if (isLatestConversation && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [isLatestConversation]);
 
   const handleCopy = async () => {
     if (!currentResult) return;
@@ -226,7 +233,7 @@ export const ResultCard = ({
   };
 
   return (
-    <Card className={`flex flex-col h-full ${isMobile ? 'w-full border-none shadow-none' : ''}`}>
+    <Card ref={cardRef} className={`flex flex-col h-full ${isMobile ? 'w-full border-none shadow-none' : ''}`}>
       <div className="flex items-center justify-between p-5 pb-0">
         <div className="flex items-center gap-3">
           {isFusionCard ? (

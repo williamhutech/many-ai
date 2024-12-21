@@ -73,7 +73,7 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, s
   return (
     <div className="fixed inset-0 flex items-center justify-center">
       <div className="w-full max-w-3xl mx-auto px-4">
-        <div className="flex flex-col items-center space-y-8">
+        <div className="flex flex-col items-center space-y-6">
           <h2 className="text-xl font-semibold text-center">
             Select AI Models to Use for ManyAI:
           </h2>
