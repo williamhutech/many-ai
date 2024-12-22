@@ -531,11 +531,6 @@ export default function SDKPlayground() {
     const currentInput = input;
     setInput('');
 
-    // Reset input box height
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
-    }
-
     if (isInitialState) {
       setIsDismissing(true);
       setTimeout(() => {
@@ -935,24 +930,6 @@ export default function SDKPlayground() {
 
   const handleInputChange = (e: { target: { value: string } }) => {
     setInput(e.target.value);
-    
-    // Get the div element
-    const element = inputRef.current;
-    if (!element) return;
-    
-    const lineHeight = parseInt(window.getComputedStyle(element).lineHeight);
-    const maxHeight = lineHeight * 5; // Limit to 5 lines
-    
-    // Apply max height limit
-    const newHeight = Math.min(element.scrollHeight, maxHeight);
-    element.style.height = `${newHeight}px`;
-    
-    // Enable/disable scrolling based on content height
-    if (element.scrollHeight > maxHeight) {
-      element.style.overflowY = 'auto';
-    } else {
-      element.style.overflowY = 'hidden';
-    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -971,10 +948,7 @@ export default function SDKPlayground() {
         onNewChat={handleNewChat}
       />
       {/* Main content area with conversation history and result cards */}
-      <main className={cn(
-        "flex-1 w-full",
-        isInitialState ? "flex items-center justify-center" : "overflow-y-auto"
-      )}>
+      <main className="flex-grow">
         <div className={cn(
           "container mx-auto",
           isInitialState ? "p-4" : "p-6",
@@ -1141,8 +1115,7 @@ export default function SDKPlayground() {
           "px-4 sm:px-10 py-4"
         )}
         style={{ 
-          minHeight: `${footerHeight}px`,
-          height: 'auto'
+          minHeight: `${footerHeight}px`
         }}
       >
         {(isStreaming || isFusionLoading) && (
@@ -1258,13 +1231,13 @@ export default function SDKPlayground() {
             </div>
           </form>
           <p className={cn(
-            "text-xs text-gray-500 flex-shrink-0 pb-2",
-            !isInitialFooter ? "block sm:block" : ""
+            "text-xs text-gray-500 flex-shrink-0",
+            "pb-0"
           )}>
             {isInitialFooter
               ? <>By continuing, you agree to our <button onClick={(e) => { e.preventDefault(); setIsTermsOpen(true); }} className="underline hover:text-gray-700">Terms</button> and our <button onClick={(e) => { e.preventDefault(); setIsPrivacyOpen(true); }} className="underline hover:text-gray-700">Privacy Policy</button>.</>
               : <>
-                  <span className="hidden sm:inline">AI make mistakes. That&apos;s why we&apos;re building true multi-model experience.</span>
+                  <span className="hidden sm:inline">AI can make mistakes. That&apos;s why we&apos;re building a multi-model experience.</span>
                   <span className="inline sm:hidden">If you like it so far, share ManyAI with your friends!</span>
                 </>
             }
