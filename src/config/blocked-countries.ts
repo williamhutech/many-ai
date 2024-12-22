@@ -21,4 +21,5 @@ export const BLOCKED_COUNTRIES: BlockedCountry[] = [
   { country: 'SO', country_name: 'Somalia' },
   { country: 'KP', country_name: 'North Korea' },
   { country: 'SS', country_name: 'South Sudan' },
+  { country: 'RU', country_name: 'Russia' },
 ];

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import ResultCard from './resultcard';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,16 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   const totalSlides = models.length + 1;
   const [direction, setDirection] = useState(0);
 
+  // Ref to the main container to auto-scroll to top on slide change
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top whenever the currentIndex changes
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentIndex]);
+
   const handleNext = () => {
     if (currentIndex < totalSlides - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -43,16 +53,16 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 20 : 0,
-      opacity: 0
+      opacity: 0,
     }),
     center: {
       x: 0,
-      opacity: 1
+      opacity: 1,
     },
     exit: (direction: number) => ({
       x: direction < 0 ? 20 : 0,
-      opacity: 0
-    })
+      opacity: 0,
+    }),
   };
 
   const swipeConfidenceThreshold = 1000;
@@ -61,13 +71,17 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   };
 
   const paginate = (newDirection: number) => {
-    if (currentIndex + newDirection >= 0 && currentIndex + newDirection < totalSlides) {
+    const newIndex = currentIndex + newDirection;
+    if (newIndex >= 0 && newIndex < totalSlides) {
       setDirection(newDirection);
-      setCurrentIndex(currentIndex + newDirection);
+      setCurrentIndex(newIndex);
     }
   };
 
-  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, { offset, velocity }: PanInfo) => {
+  const handleDragEnd = (
+    _: MouseEvent | TouchEvent | PointerEvent,
+    { offset, velocity }: PanInfo
+  ) => {
     const swipe = swipePower(offset.x, velocity.x);
 
     if (swipe < -swipeConfidenceThreshold) {
@@ -78,7 +92,10 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col">
+    <div
+      className="relative w-full h-full flex flex-col overflow-hidden mobile-carousel-container"
+      ref={containerRef}
+    >
       <div className="absolute inset-0 bottom-8">
         <AnimatePresence initial={false} custom={direction} mode="sync">
           <motion.div
@@ -87,9 +104,10 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
             initial="enter"
             animate="center"
             exit="exit"
+            custom={direction}
             transition={{
-              x: { type: "tween", duration: 0.2 },
-              opacity: { duration: 0.15 }
+              x: { type: 'tween', duration: 0.2 },
+              opacity: { duration: 0.15 },
             }}
             className="absolute inset-0"
             onDragEnd={handleDragEnd}
@@ -124,8 +142,8 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation Arrows */}
-        <div className="absolute inset-y-0 left-2 flex items-center z-10">
+        {/* Left Arrow */}
+        <div className="absolute top-1/2 -translate-y-1/2 left-2 z-10 flex items-center">
           {currentIndex > 0 && (
             <Button
               variant="ghost"
@@ -144,13 +162,14 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
                 strokeLinejoin="round"
                 className="text-gray-600"
               >
-                <path d="m15 18-6-6 6-6"/>
+                <path d="m15 18-6-6 6-6" />
               </svg>
             </Button>
           )}
         </div>
 
-        <div className="absolute inset-y-0 right-2 flex items-center z-10">
+        {/* Right Arrow */}
+        <div className="absolute top-1/2 -translate-y-1/2 right-2 z-10 flex items-center">
           {currentIndex < totalSlides - 1 && (
             <Button
               variant="ghost"
@@ -169,7 +188,7 @@ const MobileResultCarousel: React.FC<MobileResultCarouselProps> = ({
                 strokeLinejoin="round"
                 className="text-gray-500"
               >
-                <path d="m9 18 6-6-6-6"/>
+                <path d="m9 18 6-6-6-6" />
               </svg>
             </Button>
           )}

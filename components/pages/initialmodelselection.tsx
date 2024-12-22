@@ -73,14 +73,14 @@ const InitialModelSelection: React.FC<InitialModelSelectionProps> = ({ models, s
   return (
     <div className="fixed inset-0 flex items-center justify-center">
       <div className="w-full max-w-3xl mx-auto px-4">
-        <div className="flex flex-col items-center space-y-6">
+        <div className="flex flex-col items-center space-y-4">
           <h2 className="text-xl font-semibold text-center">
-            Select AI Models to Use for ManyAI:
+            Select AI Models to Synthesize:
           </h2>
           <div className={cn(
             "grid w-full gap-3",
             "grid-cols-2 sm:grid-cols-4",
-            "sm:max-w-2xl mx-auto"
+            "max-w-[320px] sm:max-w-2xl mx-auto"
           )}>
             {providerOrder.map((providerName) => {
               const provider = aiProviders.find(p => p.name === providerName);
