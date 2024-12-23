@@ -24,9 +24,10 @@ import type { PromptParams } from '@/types/components';
 
 // Import auth components
 import { AuthModal } from '@/components/ui/authmodal';
-import LoginContent from '@/app/auth/login/page';
+import LoginContent from '@/app/auth/login/LoginContent';
 import SignUpPage from '@/app/auth/signup/page';
-import ResetPasswordPage from '@/app/auth/resetpassword/page';
+import ResetPasswordContent from '@/app/auth/resetpassword/ResetPasswordContent';
+import SignUpContent from '@/app/auth/signup/SignUpContent';
 
 const Header = ({ mode, onModeChange, onNewChat, onAuthClick }: { 
   mode: 'fast' | 'smart', 
@@ -1329,10 +1330,10 @@ export default function SDKPlayground() {
           <LoginContent onViewChange={(view) => setAuthView(view as 'login' | 'signup' | 'resetpassword')} />
         )}
         {authView === 'signup' && (
-          <SignUpPage onViewChange={(view) => setAuthView(view as 'login' | 'signup' | 'resetpassword')} />
+          <SignUpContent onViewChange={(view) => setAuthView(view as 'login' | 'signup' | 'resetpassword')} />
         )}
         {authView === 'resetpassword' && (
-          <ResetPasswordPage onViewChange={(view) => setAuthView(view as 'login' | 'signup' | 'resetpassword')} />
+          <ResetPasswordContent onViewChange={(view) => setAuthView(view as 'login' | 'signup' | 'resetpassword')} />
         )}
       </AuthModal>
     </div>
