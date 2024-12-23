@@ -22,10 +22,17 @@ import { BLOCKED_COUNTRIES } from '@/config/blocked-countries';
 import Link from 'next/link';
 import type { PromptParams } from '@/types/components';
 
-const Header = ({ mode, onModeChange, onNewChat }: { 
+// Import auth components
+import { AuthModal } from '@/components/ui/authmodal';
+import LoginContent from '@/app/auth/login/page';
+import SignUpPage from '@/app/auth/signup/page';
+import ResetPasswordPage from '@/app/auth/resetpassword/page';
+
+const Header = ({ mode, onModeChange, onNewChat, onAuthClick }: { 
   mode: 'fast' | 'smart', 
   onModeChange: (mode: 'fast' | 'smart') => void,
-  onNewChat: () => void 
+  onNewChat: () => void,
+  onAuthClick: (view: 'login' | 'signup') => void
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -77,7 +84,7 @@ const Header = ({ mode, onModeChange, onNewChat }: {
     const handleClose = () => {
       overlay.classList.remove('animate-in', 'fade-in');
       overlay.classList.add('animate-out', 'fade-out');
-      
+
       sidebar.classList.remove('animate-in', 'slide-in-from-left');
       sidebar.classList.add('animate-out', 'slide-out-to-left');
       
@@ -165,9 +172,18 @@ const Header = ({ mode, onModeChange, onNewChat }: {
             </div>
           </Button>
         </div>
-        <Link href="/auth/signup">
-          <Button size="xs" className="text-xs">Sign Up</Button>
-        </Link>
+
+        {/* 
+          Instead of a link to /auth/signup, we open the AuthModal and show SignUp content.
+          You can similarly do the same for login, reset, etc.
+        */}
+        <Button 
+          size="xs" 
+          className="text-xs" 
+          onClick={() => onAuthClick('signup')}
+        >
+          Sign Up
+        </Button>
       </div>
     </header>
   );
@@ -189,6 +205,10 @@ const sortModels = (modelsToSort: string[]): string[] => {
 };
 
 export default function SDKPlayground() {
+  // Auth-related state
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'signup' | 'resetpassword'>('signup');
+
   // Initialize mode to 'fast'
   const [mode, setMode] = useState<'fast' | 'smart'>(() => {
     if (typeof window !== 'undefined') {
@@ -200,6 +220,19 @@ export default function SDKPlayground() {
   // Initialize models to default models for 'fast' mode
   const [models, setModels] = useState<string[]>(getDefaultModels('fast'));
 
+  // Example: update root state when "Sign Up" is clicked
+  const handleOpenAuth = (view: 'login' | 'signup') => {
+    setAuthView(view);
+    setShowAuthModal(true);
+  };
+
+  // This could similarly be used for Login
+  const handleCloseAuth = () => {
+    setShowAuthModal(false);
+  };
+
+
+
   // Function to handle mode change
   const handleModeChange = (newMode: 'fast' | 'smart') => {
     setMode(newMode);
@@ -209,7 +242,7 @@ export default function SDKPlayground() {
       localStorage.setItem('modelMode', newMode);
     }
 
-    // Track mode change event
+    // Track mode change
     amplitude.track('Mode Changed', {
       previousMode: mode,
       newMode: newMode,
@@ -334,7 +367,7 @@ export default function SDKPlayground() {
         const data = await response.json();
         
         if (!data.country) {
-          console.warn('⚠��� No country code received, defaulting to unblocked');
+          console.warn('⚠ No country code received, defaulting to unblocked');
           setIsLocationBlocked(false);
           return;
         }
@@ -956,6 +989,18 @@ export default function SDKPlayground() {
     // Your implementation
   };
 
+  React.useEffect(() => {
+    const handleHeightChange = (e: CustomEvent<{ height: number }>) => {
+      setFooterHeight(e.detail.height);
+      document.documentElement.style.setProperty('--footer-height', `${e.detail.height}px`);
+    };
+
+    window.addEventListener('inputHeightChange', handleHeightChange as EventListener);
+    return () => {
+      window.removeEventListener('inputHeightChange', handleHeightChange as EventListener);
+    };
+  }, []);
+
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
@@ -963,6 +1008,7 @@ export default function SDKPlayground() {
         mode={mode} 
         onModeChange={handleModeChange} 
         onNewChat={handleNewChat}
+        onAuthClick={handleOpenAuth}
       />
       {/* Main content area with conversation history and result cards */}
       <main className="flex-grow">
@@ -1253,8 +1299,8 @@ export default function SDKPlayground() {
             <ul className="list-disc pl-6 space-y-2">
               <li>User inputs and prompts submitted to the AI models</li>
               <li>Usage patterns and interaction data</li>
-              <li>Location data for service availability determination</li>
-              <li>Technical information about your device and browser</li>
+              <li>Location data for service availability</li>
+              <li>Technical device/browser info</li>
             </ul>
           </section>
 
@@ -1269,6 +1315,26 @@ export default function SDKPlayground() {
           </section>
         </div>
       </Modal>
+
+      {/* 
+        The AuthModal. 
+        The "authView" state decides which auth component to render: 
+        "login" or "signup," etc.
+      */}
+      <AuthModal 
+        isOpen={showAuthModal}
+        onClose={handleCloseAuth}
+      >
+        {authView === 'login' && (
+          <LoginContent onViewChange={(view) => setAuthView(view as 'login' | 'signup' | 'resetpassword')} />
+        )}
+        {authView === 'signup' && (
+          <SignUpPage onViewChange={(view) => setAuthView(view as 'login' | 'signup' | 'resetpassword')} />
+        )}
+        {authView === 'resetpassword' && (
+          <ResetPasswordPage onViewChange={(view) => setAuthView(view as 'login' | 'signup' | 'resetpassword')} />
+        )}
+      </AuthModal>
     </div>
   );
 }

@@ -2,14 +2,15 @@
 
 import React, { useState } from 'react';
 import { requestPasswordReset } from '../actions';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
-export default function ResetPasswordPage() {
+interface ResetPasswordPageProps {
+  onViewChange?: (view: 'login' | 'signup' | 'resetpassword') => void;
+}
+
+export default function ResetPasswordPage({ onViewChange }: ResetPasswordPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
@@ -28,16 +29,17 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="flex flex-col items-center justify-center p-4">
         <h1 className="text-2xl font-bold mb-4">Check Your Email</h1>
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded">
           Check your email for a password reset link. Don&apos;t forget to check your spam folder.
         </div>
-        <Link href="/auth/login">
-          <button className="bg-blue-500 text-white px-4 py-2 rounded">
-            Back to Login
-          </button>
-        </Link>
+        <button
+          onClick={() => onViewChange?.('login')}
+          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+        >
+          Back to Login
+        </button>
       </div>
     );
   }
@@ -65,9 +67,13 @@ export default function ResetPasswordPage() {
         >
           {loading ? 'Sending...' : 'Send Reset Email'}
         </button>
-        <Link href="/auth/login" className="text-center text-sm text-blue-500 hover:underline">
+        <button
+          onClick={() => onViewChange?.('login')}
+          className="text-center text-sm text-blue-500 hover:underline"
+          type="button"
+        >
           Back to Login
-        </Link>
+        </button>
       </form>
     </div>
   );

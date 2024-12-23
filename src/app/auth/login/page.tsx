@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signInWithPassword } from '../actions';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import Link from 'next/link';
 
-function LoginContent() {
+interface LoginContentProps {
+  onViewChange?: (view: 'login' | 'signup' | 'resetpassword') => void;
+}
+
+function LoginContent({ onViewChange }: LoginContentProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const message = searchParams.get('message');
@@ -32,10 +33,7 @@ function LoginContent() {
       setError(result.error);
       setLoading(false);
     } else if (result.success) {
-      setSuccess('Login successful! Redirecting...');
-      setTimeout(() => {
-        router.replace('/');
-      }, 1000);
+      router.replace('/dashboard');
     }
   }
 
@@ -78,24 +76,26 @@ function LoginContent() {
       <div className="space-y-2 text-center">
         <p className="text-sm text-gray-600">
           Don&apos;t have an account?{' '}
-          <Link href="/auth/signup" className="text-blue-500 hover:underline">
+          <button
+            onClick={() => onViewChange?.('signup')}
+            className="text-blue-500 hover:underline"
+            type="button"
+          >
             Sign Up
-          </Link>
+          </button>
         </p>
         <p className="text-sm">
-          <Link href="/auth/resetpassword" className="text-blue-500 hover:underline">
+          <button
+            onClick={() => onViewChange?.('resetpassword')}
+            className="text-blue-500 hover:underline"
+            type="button"
+          >
             Forgot your password?
-          </Link>
+          </button>
         </p>
       </div>
     </div>
   );
 }
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
-      <LoginContent />
-    </Suspense>
-  );
-}
+export default LoginContent;

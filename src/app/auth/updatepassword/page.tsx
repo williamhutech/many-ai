@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { updatePassword } from '../actions';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { updatePassword } from '../actions';
 
 function UpdatePasswordContent() {
   const [error, setError] = useState<string | null>(null);

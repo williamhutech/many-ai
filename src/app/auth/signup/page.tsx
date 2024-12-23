@@ -4,7 +4,11 @@ import React, { useState } from 'react';
 import { signUp } from '../actions';
 import { useRouter } from 'next/navigation';
 
-export default function SignUpPage() {
+interface SignUpPageProps {
+  onViewChange?: (view: 'login' | 'signup') => void;
+}
+
+export default function SignUpPage({ onViewChange }: SignUpPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -59,9 +63,13 @@ export default function SignUpPage() {
         <div className="text-center mt-4">
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
-            <a href="/auth/login" className="text-blue-500 hover:underline">
+            <button
+              onClick={() => onViewChange?.('login')}
+              className="text-blue-500 hover:underline"
+              type="button"
+            >
               Log In
-            </a>
+            </button>
           </p>
         </div>
       </form>
