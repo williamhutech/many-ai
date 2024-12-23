@@ -5,8 +5,10 @@ import ResetPasswordContent from './ResetPasswordContent';
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
-      <ResetPasswordContent />
-    </Suspense>
+    <div className="flex min-h-screen items-center justify-center">
+      <Suspense fallback={<div className="animate-pulse">Loading...</div>}>
+        <ResetPasswordContent />
+      </Suspense>
+    </div>
   );
 }

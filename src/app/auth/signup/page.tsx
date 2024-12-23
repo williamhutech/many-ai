@@ -5,8 +5,10 @@ import SignUpContent from './SignUpContent';
 
 export default function SignUpPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
-      <SignUpContent />
-    </Suspense>
+    <div className="flex min-h-screen items-center justify-center">
+      <Suspense fallback={<div className="animate-pulse">Loading...</div>}>
+        <SignUpContent />
+      </Suspense>
+    </div>
   );
 }

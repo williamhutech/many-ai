@@ -28,9 +28,7 @@ export function AuthModal({ isOpen, onClose, children }: AuthModalProps) {
           "max-h-[85vh] bg-white rounded-lg shadow-lg p-6 sm:p-8 overflow-y-auto"
         )}
       >
-        {/* Optional Header */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Authentication</h2>
+        <div className="flex justify-end items-center mb">
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"

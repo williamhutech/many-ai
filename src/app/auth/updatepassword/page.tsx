@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { updatePassword } from '../actions';
+import { cn } from '@/lib/utils';
 
 function UpdatePasswordContent() {
   const [error, setError] = useState<string | null>(null);
@@ -85,17 +86,15 @@ function UpdatePasswordContent() {
     } else if (result.success) {
       setSuccess(true);
       await supabase.auth.signOut();
-      setTimeout(() => {
-        router.replace('/auth/login?message=Password updated successfully');
-      }, 2000);
     }
   }
 
   if (success) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-4">
-          Password updated successfully! Redirecting to login...
+      <div className="flex flex-col items-center justify-center space-y-6 p-4 w-full max-w-sm">
+        <h1 className="text-2xl font-semibold tracking-tight">Password Updated</h1>
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-2 rounded-md text-sm w-full text-center">
+          Password updated successfully! You may close this window and log in with your new password.
         </div>
       </div>
     );
@@ -103,35 +102,51 @@ function UpdatePasswordContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-pulse">Loading...</div>
+      <div className="flex flex-col items-center justify-center space-y-6 p-4 w-full max-w-sm">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-4 p-4">
-      <h1 className="text-2xl font-bold">Set a New Password</h1>
-      <form action={handleSubmit} className="flex flex-col space-y-2 w-64">
+    <div className="flex flex-col items-center justify-center space-y-6 p-4 w-full max-w-sm">
+      <h1 className="text-2xl font-semibold tracking-tight">Set New Password</h1>
+      <form action={handleSubmit} className="flex flex-col space-y-4 w-full max-w-sm">
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+          <div className="bg-destructive/15 border border-destructive/30 text-destructive px-4 py-2 rounded-md text-sm w-full">
             {error}
           </div>
         )}
-        <input
-          type="password"
-          name="password"
-          placeholder="New password"
-          className="border p-2 rounded"
-          required
-        />
-        <button 
-          type="submit" 
-          className="bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors"
-          disabled={updating}
-        >
-          {updating ? 'Updating...' : 'Update Password'}
-        </button>
+        <div className="space-y-2 w-full">
+          <input
+            type="password"
+            name="password"
+            placeholder="New password"
+            className={cn(
+              "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2",
+              "text-sm ring-offset-background",
+              "placeholder:text-muted-foreground",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-gray-200",
+              "disabled:cursor-not-allowed disabled:opacity-50"
+            )}
+            required
+          />
+        </div>
+        <div className="w-full">
+          <button 
+            type="submit" 
+            className={cn(
+              "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background",
+              "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "disabled:pointer-events-none disabled:opacity-50",
+              "bg-primary text-primary-foreground hover:bg-primary/90",
+              "h-10 px-4 py-2 w-full"
+            )}
+            disabled={updating}
+          >
+            {updating ? 'Updating...' : 'Update Password'}
+          </button>
+        </div>
       </form>
     </div>
   );
@@ -139,8 +154,10 @@ function UpdatePasswordContent() {
 
 export default function UpdatePasswordPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
-      <UpdatePasswordContent />
-    </Suspense>
+    <div className="flex min-h-screen items-center justify-center">
+      <Suspense fallback={<div className="animate-pulse">Loading...</div>}>
+        <UpdatePasswordContent />
+      </Suspense>
+    </div>
   );
 }
