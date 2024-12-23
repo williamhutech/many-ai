@@ -9,8 +9,8 @@ interface UserPromptBubbleProps {
   isLatestPrompt?: boolean;
   onEditStart: () => void;
   onEditCancel: () => void;
-  onEditComplete?: (newPrompt: string) => void;
-  onRegenerateFromEdit?: (newPrompt: string, index: number) => void;
+  onEditComplete?: (params: { newPrompt: string }) => void;
+  onRegenerateFromEdit?: (params: { newPrompt: string; promptIndex: number }) => void;
 }
 
 export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
@@ -107,10 +107,13 @@ export const UserPromptBubble: React.FC<UserPromptBubbleProps> = ({
     const trimmedPrompt = editedPrompt.trim();
     if (trimmedPrompt !== '' && trimmedPrompt !== prompt) {
       setEditedPrompt(trimmedPrompt);
-      onEditComplete?.(trimmedPrompt);
+      onEditComplete?.({ newPrompt: trimmedPrompt });
       
       setTimeout(() => {
-        onRegenerateFromEdit?.(trimmedPrompt, index);
+        onRegenerateFromEdit?.({ 
+          newPrompt: trimmedPrompt, 
+          promptIndex: index 
+        });
       }, 0);
     }
     setIsHovered(false);

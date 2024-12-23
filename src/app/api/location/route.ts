@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 
 const IPINFO_TOKEN = process.env.IPINFO_TOKEN || '';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     // Get client IP from various headers

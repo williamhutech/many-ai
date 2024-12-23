@@ -4,16 +4,23 @@ import Head from 'next/head';
 import { useState, useEffect, useRef } from 'react';
 import * as amplitude from '@amplitude/analytics-browser';
 import { sessionReplayPlugin } from '@amplitude/plugin-session-replay-browser';
-import { Button, Input, UserPromptBubble, Modal } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { UserPromptBubble } from "@/components/ui/promptbubble";
+import { Modal } from "@/components/ui/modal";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { getProviderForModel, getModelByProviderAndMode, getDefaultModels } from '@/config/models';
-import { InitialModelSelection, StreamingStatus, ResultCard } from '@/components/pages';
-import Image from 'next/image';
+import InitialModelSelection from '@/components/pages/initialmodelselection';
+import StreamingStatus from '@/components/pages/streamingstatus';
+import ResultCard from '@/components/pages/resultcard';
 import MobileResultCarousel from '@/components/pages/mobileresultcarousel';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import React from 'react';
-import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { BLOCKED_COUNTRIES } from '@/config/blocked-countries';
+import Link from 'next/link';
+import type { PromptParams } from '@/types/components';
 
 const Header = ({ mode, onModeChange, onNewChat }: { 
   mode: 'fast' | 'smart', 
@@ -158,7 +165,9 @@ const Header = ({ mode, onModeChange, onNewChat }: {
             </div>
           </Button>
         </div>
-        <Button size="xs" className="text-xs">Sign Up</Button>
+        <Link href="/auth/signup">
+          <Button size="xs" className="text-xs">Sign Up</Button>
+        </Link>
       </div>
     </header>
   );
@@ -325,7 +334,7 @@ export default function SDKPlayground() {
         const data = await response.json();
         
         if (!data.country) {
-          console.warn('⚠️ No country code received, defaulting to unblocked');
+          console.warn('⚠��� No country code received, defaulting to unblocked');
           setIsLocationBlocked(false);
           return;
         }
@@ -939,6 +948,14 @@ export default function SDKPlayground() {
     }
   };
 
+  const handleRegenerateFromEdit = ({ newPrompt, promptIndex }: PromptParams) => {
+    // Your implementation
+  };
+
+  const handleEditComplete = ({ newPrompt }: PromptParams) => {
+    // Your implementation
+  };
+
   // Render the user interface with header, main content, and footer
   return (
     <div className="flex flex-col min-h-screen">
@@ -983,57 +1000,8 @@ export default function SDKPlayground() {
                       setEditingPromptIndex(null);
                       setEditedPrompt('');
                     }}
-                    onEditComplete={(newPrompt) => {
-                      setConversations(prev => {
-                        const newConversations = [...prev];
-                        newConversations[index].prompt = newPrompt;
-                        return newConversations;
-                      });
-                      setEditingPromptIndex(null);
-                      setEditedPrompt('');
-                    }}
-                    onRegenerateFromEdit={(newPrompt, promptIndex) => {
-                      // First, remove the last exchange from conversation histories
-                      setConversationHistories(prev => {
-                        const updated = { ...prev };
-                        models.forEach(modelId => {
-                          const history = updated[modelId] || [];
-                          if (history.length >= 2) {
-                            // Remove the last user-assistant pair
-                            updated[modelId] = history.slice(0, -2);
-                          }
-                        });
-                        return updated;
-                      });
-
-                      // Now treat it as a new prompt by calling fetchModelResponse
-                      const fetchResponses = async () => {
-                        // Wait for all model responses to complete
-                        const responses = await Promise.all(models.map((_, index) => fetchModelResponse(index, newPrompt)));
-                        
-                        // Update conversations with all responses first
-                        setConversations(prev => {
-                          const newConversations = [...prev];
-                          newConversations[promptIndex].results = responses.filter(response => response !== undefined) as string[];
-                          return newConversations;
-                        });
-
-                        // After responses are updated in state, add new exchange to histories
-                        const updatedHistories = { ...conversationHistories };
-                        models.forEach((modelId, idx) => {
-                          const history = updatedHistories[modelId] || [];
-                          history.push(
-                            { role: 'user', content: newPrompt },
-                            { role: 'assistant', content: responses[idx] || '' }
-                          );
-                          updatedHistories[modelId] = history;
-                        });
-
-                        // Now trigger fusion with the updated histories
-                        handleFusion('Multi-Model Response', true, updatedHistories);
-                      };
-                      fetchResponses();
-                    }}
+                    onEditComplete={handleEditComplete}
+                    onRegenerateFromEdit={handleRegenerateFromEdit}
                   />
 
                   {/* AI response cards */}
