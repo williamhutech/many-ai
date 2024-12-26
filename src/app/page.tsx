@@ -1051,9 +1051,8 @@ export default function SDKPlayground() {
                     onRegenerateFromEdit={handleRegenerateFromEdit}
                   />
 
-                  {/* AI response cards */}
+                  {/* Desktop layout (hidden on smaller than 640px) */}
                   <div className="hidden sm:flex flex-col gap-6">
-                    {/* ManyAI card */}
                     <div className="relative">
                       <ResultCard
                         index={models.length}
@@ -1070,24 +1069,26 @@ export default function SDKPlayground() {
                       />
                     </div>
 
-                    {/* Model cards */}
                     {showAllModels && (
-                      <div className={`
-                        grid gap-6
-                        ${models.filter(Boolean).length === 2 
-                          ? 'grid-cols-1 sm:grid-cols-2' 
-                          : models.filter(Boolean).length === 3
-                            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-                        }
-                      `}>
+                      <div
+                        className={`
+                          grid gap-6
+                          ${
+                            models.filter(Boolean).length === 2
+                              ? 'grid-cols-1 sm:grid-cols-2'
+                              : models.filter(Boolean).length === 3
+                                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+                          }
+                        `}
+                      >
                         {models.map((modelId, idx) => {
                           if (!modelId) return null;
                           const provider = getProviderForModel(modelId);
                           if (!provider) return null;
 
                           return (
-                            <ResultCard 
+                            <ResultCard
                               key={modelId}
                               index={idx}
                               models={models}
@@ -1103,7 +1104,7 @@ export default function SDKPlayground() {
                     )}
                   </div>
 
-                  {/* Mobile carousel */}
+                  {/* Mobile carousel (hidden at ≥640px) */}
                   <div className="sm:hidden w-full h-[calc(100vh-var(--header-height)-var(--footer-height))]">
                     <MobileResultCarousel
                       models={models}

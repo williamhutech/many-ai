@@ -10,6 +10,11 @@ import { Groq } from 'groq-sdk';
 import TogetherClient from 'together-ai';
 import { randomUUID } from 'crypto';
 
+// Add this interface at the top of the file, after the imports
+interface StreamError extends Error {
+  code?: string;
+}
+
 // Initialize Supabase client
 const supabase = createServerClient();
 if (supabase) {
@@ -332,15 +337,37 @@ export async function POST(req: Request) {
         console.error('Supabase client is not initialized');
       }
 
-      await writer.close();
+      try {
+        await writer.close();
+      } catch (closeError) {
+        if (
+          closeError instanceof TypeError && 
+          (closeError as StreamError).code === 'ERR_INVALID_STATE'
+        ) {
+          console.log('Stream was already closed');
+        } else {
+          console.error('Error closing stream:', closeError);
+        }
+      }
     } catch (error) {
       console.error('Error in streamResponse:', error);
       let errorMessage = 'An error occurred during processing';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`));
-      await writer.close();
+      try {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`));
+        await writer.close();
+      } catch (closeError) {
+        if (
+          closeError instanceof TypeError && 
+          (closeError as StreamError).code === 'ERR_INVALID_STATE'
+        ) {
+          console.log('Stream was already closed');
+        } else {
+          console.error('Error closing stream:', closeError);
+        }
+      }
     }
   };
 
