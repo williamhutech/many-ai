@@ -31,7 +31,7 @@ export const aiProviders: AIProvider[] = [
       {
         id: 'claude-3-haiku-20240307',
         displayName: 'Claude Haiku 3 [FAST]',
-        maxTokens: 2000,
+        maxTokens: 10000,
         enabled: true,
         mode: 'fast',
         prePrompt: 'Prioritize key information in your answer if applicable; else go straight to point.',
@@ -39,7 +39,7 @@ export const aiProviders: AIProvider[] = [
       {
         id: 'claude-3-5-sonnet-20240620',
         displayName: 'Claude Sonnet 3.5 [Smart]',
-        maxTokens: 2000,
+        maxTokens: 10000,
         enabled: true,
         mode: 'smart',
         prePrompt: 'Prioritize key information in your answer if applicable; else go straight to point.',
@@ -55,7 +55,7 @@ export const aiProviders: AIProvider[] = [
       {
         id: 'gpt-4o-2024-08-06',
         displayName: 'ChatGPT 4o [Smart]',
-        maxTokens: 6000,
+        maxTokens: 20000,
         enabled: true,
         mode: 'smart',
         prePrompt: 'Prioritize key information in your answer.',
@@ -63,7 +63,7 @@ export const aiProviders: AIProvider[] = [
       {
         id: 'gpt-4o-mini-2024-07-18',
         displayName: 'ChatGPT 4o [FAST]',
-        maxTokens: 2000,
+        maxTokens: 10000,
         enabled: true,
         mode: 'fast',
         prePrompt: 'Prioritize key information in your answer.',
@@ -87,7 +87,7 @@ export const aiProviders: AIProvider[] = [
       {
         id: 'gemini-1.5-pro-002',
         displayName: 'Gemini 1.5 [Smart]',
-        maxTokens: 2000,
+        maxTokens: 10000,
         enabled: true,
         mode: 'smart',
         prePrompt: 'Prioritize key information in your answer if applicable',
@@ -95,7 +95,7 @@ export const aiProviders: AIProvider[] = [
       {
         id: 'gemini-1.5-flash-002',
         displayName: 'Gemini 1.5 [FAST]',
-        maxTokens: 2000,
+        maxTokens: 10000,
         enabled: true,
         mode: 'fast',
         prePrompt: 'Prioritize key information in your answer if applicable',
