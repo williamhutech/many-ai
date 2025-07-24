@@ -1,4 +1,4 @@
-# VerZero
+# ManyAI
 
 This is a Next.js project that compares responses from multiple AI models.
 
