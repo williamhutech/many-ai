@@ -1,16 +1,22 @@
 # ✨ **ManyAI** - Multi-Model AI Platform
 
-<div align="left">
+<div align="center">
   <p><em>Experience the power of multiple AI models in a single, elegant interface</em></p>
 
   ![Next.js](https://img.shields.io/badge/Next.js-14.2.12-black?style=flat-square&logo=next.js)
   ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
   ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.12-38B2AC?style=flat-square&logo=tailwind-css)
   ![Supabase](https://img.shields.io/badge/Supabase-2.47.10-3ECF8E?style=flat-square&logo=supabase)
+</div>
 
-<div align="left">
+<div align="center">
   <img src="public/screenshot.png" alt="ManyAI Interface Screenshot" width="800">
   <p><em>ManyAI's intuitive multi-model interface</em></p>
+</div>
+
+<div align="center">
+  <img src="public/screenshot2.png" alt="ManyAI Synthesis Screenshot" width="800">
+  <p><em>Complex questions would receive final synthesized output that captures the best of each model</em></p>
 </div>
 
 ---
