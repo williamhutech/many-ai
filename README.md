@@ -8,9 +8,6 @@
   ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.12-38B2AC?style=flat-square&logo=tailwind-css)
   ![Supabase](https://img.shields.io/badge/Supabase-2.47.10-3ECF8E?style=flat-square&logo=supabase)
 
-  <img src="public/logo.svg" alt="ManyAI Logo" width="80" height="80">
-</div>
-
 <div align="center">
   <img src="public/screenshot.png" alt="ManyAI Interface Screenshot" width="800">
   <p><em>ManyAI's intuitive multi-model interface in action</em></p>
