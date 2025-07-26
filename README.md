@@ -1,6 +1,6 @@
 # ✨ **ManyAI** - Multi-Model AI Platform
 
-<div align="center">
+<div align="left">
   <p><em>Experience the power of multiple AI models in a single, elegant interface</em></p>
 
   ![Next.js](https://img.shields.io/badge/Next.js-14.2.12-black?style=flat-square&logo=next.js)
@@ -8,9 +8,9 @@
   ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.12-38B2AC?style=flat-square&logo=tailwind-css)
   ![Supabase](https://img.shields.io/badge/Supabase-2.47.10-3ECF8E?style=flat-square&logo=supabase)
 
-<div align="center">
+<div align="left">
   <img src="public/screenshot.png" alt="ManyAI Interface Screenshot" width="800">
-  <p><em>ManyAI's intuitive multi-model interface in action</em></p>
+  <p><em>ManyAI's intuitive multi-model interface</em></p>
 </div>
 
 ---
@@ -216,7 +216,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ---
 
-<div align="center">
+<div align="left">
   <p><strong>Built with ❤️ by William from Singapore</strong></p>
   <p><em>Bringing multiple AI minds and synthesizing the ideas</em></p>
 </div>
