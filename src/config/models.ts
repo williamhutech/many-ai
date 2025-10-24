@@ -85,16 +85,16 @@ export const aiProviders: AIProvider[] = [
     avatar: '/avatars/gemini.png',
     models: [
       {
-        id: 'gemini-1.5-pro',
-        displayName: 'Gemini 1.5 [Smart]',
+        id: 'gemini-2.5-pro',
+        displayName: 'Gemini 2.5 [Smart]',
         maxTokens: 10000,
         enabled: true,
         mode: 'smart',
         prePrompt: 'Prioritize key information in your answer if applicable',
       },
       {
-        id: 'gemini-1.5-flash',
-        displayName: 'Gemini 1.5 [FAST]',
+        id: 'gemini-flash-latest',
+        displayName: 'Gemini Flash [FAST]',
         maxTokens: 10000,
         enabled: true,
         mode: 'fast',
