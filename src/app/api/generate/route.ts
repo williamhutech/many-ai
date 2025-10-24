@@ -4,7 +4,7 @@ import { aiProviders, getProviderForModel, getModelById } from '@/config/models'
 import { createServerClient } from '@/lib/supabase/server'; // Updated import
 import OpenAI from 'openai';
 import { Anthropic } from '@anthropic-ai/sdk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import axios from 'axios';
 import { Groq } from 'groq-sdk';
 import TogetherClient from 'together-ai';
@@ -43,7 +43,7 @@ const openaiClient = new OpenAI({
   apiKey: openaiApiKey,
 });
 
-const googleClient = new GoogleGenerativeAI(googleApiKey);
+const googleClient = new GoogleGenAI({ apiKey: googleApiKey });
 
 // Add Meta-Llama client
 const deepInfraClient = new OpenAI({
@@ -210,43 +210,42 @@ export async function POST(req: Request) {
           throw new Error('Model configuration not found');
         }
 
-        const model = googleClient.getGenerativeModel({ 
-          model: selectedModel,
-          generationConfig: {
-            maxOutputTokens: modelConfig.maxTokens,
-            temperature: 0.7,
-            candidateCount: 1,
-            topK: 40,
-            topP: 0.8,
-          }
-        });
-
-        // Optimize history format for Gemini
+        // Optimize history format for Gemini (new SDK uses same format)
         const geminiHistory = history.map((msg: { role: string; content: string }) => ({
           role: msg.role === 'user' ? 'user' : 'model',
           parts: [{ text: msg.content }]
         }));
 
         try {
-          // Use generateContentStream with optimized parameters
-          const result = await model.generateContentStream({
-            contents: geminiHistory
+          // Use new SDK's generateContentStream
+          const response = await googleClient.models.generateContentStream({
+            model: selectedModel,
+            contents: geminiHistory,
+            config: {
+              maxOutputTokens: modelConfig.maxTokens,
+              temperature: 0.7,
+              candidateCount: 1,
+              topK: 40,
+              topP: 0.8,
+            }
           });
 
           let fullResponse = '';
-          const textDecoder = new TextDecoder();
 
-          for await (const chunk of result.stream) {
-            const chunkText = chunk.text();
-            fullResponse += chunkText;
-            modelResponse += chunkText;
-            await writeChunk(chunkText);
+          // New SDK: iterate directly over response instead of response.stream
+          for await (const chunk of response) {
+            const chunkText = chunk.text;
+            if (chunkText) {
+              fullResponse += chunkText;
+              modelResponse += chunkText;
+              await writeChunk(chunkText);
+            }
           }
 
           // Add response to history
-          history.push({ 
-            role: 'assistant', 
-            content: fullResponse 
+          history.push({
+            role: 'assistant',
+            content: fullResponse
           });
         } catch (error) {
           console.error('Gemini streaming error:', error);
@@ -290,22 +289,6 @@ export async function POST(req: Request) {
             modelResponse += chunk.choices[0].delta.content;
             await writeChunk(chunk.choices[0].delta.content);
           }
-        }
-      } else if (provider.clientName === 'gemini-1.5-flash-002') {
-        const fusionModel = googleClient.getGenerativeModel({ model: selectedModel });
-        const fusionChat = fusionModel.startChat({
-          history: history.map((msg: { role: string; content: string }) => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: msg.content,
-          })),
-        });
-
-        const fusionResult = await fusionChat.sendMessageStream(prompt);
-
-        for await (const chunk of fusionResult.stream) {
-          const chunkText = chunk.text();
-          modelResponse += chunkText;
-          await writeChunk(chunkText);
         }
       }
 

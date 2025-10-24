@@ -93,7 +93,7 @@ export const aiProviders: AIProvider[] = [
         prePrompt: 'Prioritize key information in your answer if applicable',
       },
       {
-        id: 'gemini-flash-latest',
+        id: 'gemini-2.5-flash',
         displayName: 'Gemini Flash [FAST]',
         maxTokens: 10000,
         enabled: true,
